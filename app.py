@@ -50,7 +50,7 @@ if "user" not in st.session_state:
 
 
 # -----------------------------------------------------------------------------
-# 2. HELPER FUNCTIONS FOR STORAGE, MEDIA, CHAT & REVIEWS
+# 2. HELPER FUNCTIONS FOR STORAGE, MEDIA & CHAT
 # -----------------------------------------------------------------------------
 def upload_file_to_supabase(uploaded_file, user_id, folder="media"):
     try:
@@ -112,11 +112,6 @@ def render_chat_window(proposal_id, user_id):
                 st.rerun()
     except Exception as e:
         st.error(f"Error loading chat: {e}")
-
-def render_rating_stars(val):
-    if not val:
-        return "⭐ Unrated"
-    return "⭐" * int(round(val)) + f" ({val:.1f}/5.0)"
 
 
 # -----------------------------------------------------------------------------
@@ -220,7 +215,6 @@ def render_analytics_dashboard(user_id):
         pending_count = sum(1 for p in proposals if p.get("status") == "pending")
         est_cash_saved = completed_count * 1250
 
-        # Metrics Overview
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Active Listings", len(user_posts))
@@ -233,7 +227,6 @@ def render_analytics_dashboard(user_id):
 
         st.divider()
 
-        # CSV Tax Export Section
         st.markdown("### 📄 Corporate Tax & Audit CSV Exporter")
         st.caption("Generate an official ledger of all completed barter transactions for corporate income tax reporting.")
 
@@ -244,6 +237,7 @@ def render_analytics_dashboard(user_id):
                 offered = t.get("offered") or {}
                 proposer = t.get("proposer") or {}
                 recipient = t.get("recipient") or {}
+                topup = float(t.get("cash_topup_amount") or 0.0)
 
                 export_rows.append({
                     "Transaction_ID": t["id"],
@@ -252,8 +246,9 @@ def render_analytics_dashboard(user_id):
                     "Recipient_Company": recipient.get("business_name"),
                     "Offered_Service": offered.get("title"),
                     "Received_Service": target.get("title"),
+                    "Cash_TopUp_CAD": topup,
                     "Status": t["status"].upper(),
-                    "Est_Benchmark_Valuation_CAD": 1250.00
+                    "Est_Valuation_CAD": 1250.00 + topup
                 })
 
             df_export = pd.DataFrame(export_rows)
@@ -494,6 +489,8 @@ def render_trade_proposals(user_id):
                     offered = prop.get("offered") or {}
                     proposer = prop.get("proposer") or {}
                     status = prop.get("status", "pending")
+                    cash_topup = float(prop.get("cash_topup_amount") or 0.0)
+                    cash_payer = prop.get("cash_payer_id")
                     
                     status_badge = {
                         "pending": "⏳ PENDING",
@@ -519,9 +516,13 @@ def render_trade_proposals(user_id):
                         with col_offered:
                             st.markdown(f"**Their Offered Item:** {offered.get('title', 'Unknown Listing')}")
                             st.caption(offered.get('description', '')[:100] + "...")
+
+                        if cash_topup > 0:
+                            payer_name = "Proposer" if cash_payer == prop["proposer_id"] else "You"
+                            st.info(f"💵 **Cash Top-Up Included:** ${cash_topup:,.2f} CAD paid by {payer_name} to balance valuation.")
                         
                         if prop.get("message"):
-                            st.info(f"💬 **Proposer's Note:** {prop['message']}")
+                            st.caption(f"💬 **Proposer's Note:** {prop['message']}")
                             
                         if status == "pending":
                             col_acc, col_dec, _ = st.columns([1, 1, 3])
@@ -562,6 +563,7 @@ Date: {prop['created_at'][:10]}
 ====================================================================
 PARTY A: {proposer.get('business_name')} ({proposer.get('contact_email')})
 PARTY B: Recipient Business
+CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
 ===================================================================="""
                                 st.download_button("📥 Download Contract (.txt)", agreement_text, file_name=f"TradeIt_Agreement_{prop['id'][:8]}.txt", key=f"dl_agreed_{prop['id']}")
                             
@@ -589,6 +591,7 @@ PARTY B: Recipient Business
                     offered = prop.get("offered") or {}
                     recipient = prop.get("recipient") or {}
                     status = prop.get("status", "pending")
+                    cash_topup = float(prop.get("cash_topup_amount") or 0.0)
                     
                     status_badge = {
                         "pending": "⏳ PENDING",
@@ -609,6 +612,9 @@ PARTY B: Recipient Business
                             st.markdown("### 🔄 FOR")
                         with col_target:
                             st.markdown(f"**Target Listing:** {target.get('title', 'Unknown Listing')}")
+
+                        if cash_topup > 0:
+                            st.info(f"💵 **Cash Top-Up Included:** ${cash_topup:,.2f} CAD balancing adjustment")
 
                         if status == "pending":
                             if st.button("🚫 Cancel Proposal", key=f"cncl_{prop['id']}", type="secondary"):
@@ -703,7 +709,6 @@ def render_business_profile(user_id):
 def main_app():
     user = st.session_state.user
     
-    # Check if current user is an admin
     is_admin = False
     try:
         my_prof_res = supabase.table("profiles").select("is_admin").eq("id", user.id).execute()
@@ -822,15 +827,25 @@ def main_app():
                                         with st.form(key=f"prop_form_{post['id']}"):
                                             post_options = {f"{p['title']} ({(p.get('type') or p.get('post_type') or 'Offer')})": p["id"] for p in my_active_posts}
                                             selected_label = st.selectbox("Select item to offer:", list(post_options.keys()))
+                                            
+                                            st.caption("💵 **Optional Cash Top-Up (for value balancing):**")
+                                            cash_topup_val = st.number_input("Cash Amount (CAD)", min_value=0.0, step=50.0, value=0.0)
+                                            cash_payer_choice = st.radio("Cash paid by:", ["I will pay this cash top-up", "Partner should pay this cash top-up"], horizontal=True)
+                                            
                                             proposal_msg = st.text_area("Pitch note:", placeholder="Hi! We would love to swap...")
                                             submit_prop = st.form_submit_button("Send Proposal", type="primary")
+                                            
                                             if submit_prop:
                                                 offered_id = post_options[selected_label]
+                                                payer_id = user.id if "I will pay" in cash_payer_choice else post["user_id"]
+                                                
                                                 supabase.table("trade_proposals").insert({
                                                     "proposer_id": user.id,
                                                     "recipient_id": post["user_id"],
                                                     "target_post_id": post["id"],
                                                     "offered_post_id": offered_id,
+                                                    "cash_topup_amount": cash_topup_val,
+                                                    "cash_payer_id": payer_id if cash_topup_val > 0 else None,
                                                     "message": proposal_msg
                                                 }).execute()
                                                 st.toast("Trade proposal sent!", icon="🚀")
