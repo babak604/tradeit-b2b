@@ -465,7 +465,52 @@ Generated automatically via TradeIt B2B Marketplace.
         except Exception as e:
             st.error(f"Error loading sent proposals: {e}")
 
+def render_rating_stars(rating_val):
+    """Returns a visual star string for ratings."""
+    full_stars = "⭐" * int(rating_val)
+    return f"{full_stars} ({rating_val:.1f}/5.0)"
 
+def render_review_form(prop, user_id):
+    """Form to submit a review for a completed barter transaction."""
+    proposer_id = prop["proposer_id"]
+    recipient_id = prop["recipient_id"]
+    reviewee_id = recipient_id if user_id == proposer_id else proposer_id
+
+    # Check if user already reviewed this proposal
+    existing_res = supabase.table("reviews") \
+        .select("*") \
+        .eq("proposal_id", prop["id"]) \
+        .eq("reviewer_id", user_id) \
+        .execute()
+
+    if existing_res.data:
+        rev = existing_res.data[0]
+        st.success(f"✅ **You reviewed this trade:** {rev['rating']}/5 ⭐ — *\"{rev.get('comment', '')}\"*")
+        return
+
+    st.markdown("#### ⭐ Leave a Verified Trade Review")
+    with st.form(key=f"rev_form_{prop['id']}"):
+        rating = st.slider("Rating", min_value=1, max_value=5, value=5)
+        comment = st.text_area("Review / Feedback", placeholder="How was the quality of service, communication, and delivery?")
+        submit_rev = st.form_submit_button("Submit Review", type="primary")
+
+        if submit_rev:
+            try:
+                supabase.table("reviews").insert({
+                    "proposal_id": prop["id"],
+                    "reviewer_id": user_id,
+                    "reviewee_id": reviewee_id,
+                    "rating": rating,
+                    "comment": comment
+                }).execute()
+                
+                # Update proposal status to completed if needed
+                supabase.table("trade_proposals").update({"status": "completed"}).eq("id", prop["id"]).execute()
+                st.toast("Review submitted successfully!", icon="⭐")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to submit review: {e}")
+                
 # -----------------------------------------------------------------------------
 # 6. BUSINESS PROFILE MODULE
 # -----------------------------------------------------------------------------
