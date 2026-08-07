@@ -50,7 +50,7 @@ if "user" not in st.session_state:
 
 
 # -----------------------------------------------------------------------------
-# 2. HELPER FUNCTIONS FOR STORAGE, MEDIA & CHAT
+# 2. HELPER FUNCTIONS FOR STORAGE, MEDIA, CHAT & NOTIFICATIONS
 # -----------------------------------------------------------------------------
 def upload_file_to_supabase(uploaded_file, user_id, folder="media"):
     try:
@@ -77,7 +77,18 @@ def render_media(url, width=350):
     else:
         st.image(url, width=width)
 
-def render_chat_window(proposal_id, user_id):
+def send_notification(user_id, title, message):
+    """Inserts an automated notification into the database."""
+    try:
+        supabase.table("notifications").insert({
+            "user_id": user_id,
+            "title": title,
+            "message": message
+        }).execute()
+    except Exception:
+        pass
+
+def render_chat_window(proposal_id, user_id, recipient_id):
     try:
         msgs_res = supabase.table("messages") \
             .select("*, sender:profiles(business_name)") \
@@ -109,13 +120,52 @@ def render_chat_window(proposal_id, user_id):
                     "sender_id": user_id,
                     "content": new_msg.strip()
                 }).execute()
+
+                # Trigger Chat Notification
+                send_notification(
+                    user_id=recipient_id,
+                    title="💬 New Trade Message Received",
+                    message=f"You received a new message regarding Trade #{proposal_id[:8].upper()}."
+                )
                 st.rerun()
     except Exception as e:
         st.error(f"Error loading chat: {e}")
 
 
 # -----------------------------------------------------------------------------
-# 3. SMART MATCHMAKING & ANALYTICS MODULES
+# 3. NOTIFICATION FEED COMPONENT
+# -----------------------------------------------------------------------------
+def render_notifications_feed(user_id):
+    st.subheader("🔔 Activity & System Notifications")
+    try:
+        res = supabase.table("notifications").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        notifications = res.data or []
+
+        if not notifications:
+            st.info("You have no new notifications.")
+            return
+
+        col_clear, _ = st.columns([1, 4])
+        with col_clear:
+            if st.button("✔️ Mark All as Read", type="secondary"):
+                supabase.table("notifications").update({"is_read": True}).eq("user_id", user_id).execute()
+                st.rerun()
+
+        st.divider()
+        for notif in notifications:
+            is_unread = not notif.get("is_read", False)
+            bg_badge = "🔴 UNREAD" if is_unread else "⚪ READ"
+            
+            with st.container(border=True):
+                st.markdown(f"**{bg_badge} | {notif['title']}**")
+                st.caption(f"Received: {notif['created_at'][:10]} {notif['created_at'][11:16]}")
+                st.write(notif["message"])
+    except Exception as e:
+        st.error(f"Error loading notifications: {e}")
+
+
+# -----------------------------------------------------------------------------
+# 4. SMART MATCHMAKING & ANALYTICS MODULES
 # -----------------------------------------------------------------------------
 def render_smart_matches(user_id, my_posts):
     st.subheader("⚡ Automated Barter Matchmaker")
@@ -189,6 +239,13 @@ def render_smart_matches(user_id, my_posts):
                                     "offered_post_id": need["id"],
                                     "message": f"Smart Match Connection: We are interested in swapping our {need['title']} listing for your {offer['title']}!"
                                 }).execute()
+
+                                send_notification(
+                                    user_id=offer["user_id"],
+                                    title="🚀 New Smart Match Proposal Received",
+                                    message=f"A company proposed a trade for your listing '{offer['title']}'."
+                                )
+
                                 st.toast("Trade proposal sent to partner!", icon="🚀")
                                 st.rerun()
                             except Exception as e:
@@ -270,7 +327,7 @@ def render_analytics_dashboard(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 4. ADMIN & MODERATION PANEL
+# 5. ADMIN & MODERATION PANEL
 # -----------------------------------------------------------------------------
 def render_admin_panel():
     st.subheader("🛡️ Platform Admin & Moderation Operations")
@@ -314,6 +371,13 @@ def render_admin_panel():
                         btn_label = "Revoke" if p.get("is_verified") else "Verify"
                         if st.button(btn_label, key=f"admin_verify_{p['id']}"):
                             supabase.table("profiles").update({"is_verified": new_status}).eq("id", p["id"]).execute()
+                            
+                            send_notification(
+                                user_id=p["id"],
+                                title="🏢 Verification Status Updated",
+                                message=f"Your business profile verification status has been set to: {btn_label}d."
+                            )
+
                             st.toast("Updated verification status!", icon="✅")
                             st.rerun()
 
@@ -322,7 +386,7 @@ def render_admin_panel():
 
 
 # -----------------------------------------------------------------------------
-# 5. AUTHENTICATION MODULE
+# 6. AUTHENTICATION MODULE
 # -----------------------------------------------------------------------------
 def render_auth_page():
     st.title("🤝 Welcome to TradeIt")
@@ -377,7 +441,7 @@ def render_auth_page():
 
 
 # -----------------------------------------------------------------------------
-# 6. MY LISTINGS COMPONENT
+# 7. MY LISTINGS COMPONENT
 # -----------------------------------------------------------------------------
 def render_my_listings(user_id):
     st.subheader("📋 My Active Listings")
@@ -464,7 +528,7 @@ def render_my_listings(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 7. TRADE PROPOSALS COMPONENT
+# 8. TRADE PROPOSALS COMPONENT
 # -----------------------------------------------------------------------------
 def render_trade_proposals(user_id):
     st.subheader("📬 Trade Proposals Inbox")
@@ -529,11 +593,25 @@ def render_trade_proposals(user_id):
                             with col_acc:
                                 if st.button("✅ Accept Trade", key=f"acc_{prop['id']}", type="primary"):
                                     supabase.table("trade_proposals").update({"status": "accepted"}).eq("id", prop["id"]).execute()
+                                    
+                                    send_notification(
+                                        user_id=prop["proposer_id"],
+                                        title="🎉 Trade Proposal Accepted!",
+                                        message=f"Your trade proposal for '{target.get('title')}' was accepted."
+                                    )
+
                                     st.toast("Trade proposal accepted!", icon="🎉")
                                     st.rerun()
                             with col_dec:
                                 if st.button("❌ Decline Trade", key=f"dec_{prop['id']}", type="secondary"):
                                     supabase.table("trade_proposals").update({"status": "declined"}).eq("id", prop["id"]).execute()
+                                    
+                                    send_notification(
+                                        user_id=prop["proposer_id"],
+                                        title="ℹ️ Trade Proposal Declined",
+                                        message=f"Your trade proposal for '{target.get('title')}' was declined."
+                                    )
+
                                     st.toast("Trade proposal declined.", icon="ℹ️")
                                     st.rerun()
 
@@ -568,7 +646,7 @@ CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
                                 st.download_button("📥 Download Contract (.txt)", agreement_text, file_name=f"TradeIt_Agreement_{prop['id'][:8]}.txt", key=f"dl_agreed_{prop['id']}")
                             
                             st.divider()
-                            render_chat_window(prop["id"], user_id)
+                            render_chat_window(prop["id"], user_id, prop["proposer_id"])
                                     
         except Exception as e:
             st.error(f"Error loading received proposals: {e}")
@@ -626,14 +704,14 @@ CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
                             st.success("🎉 **Trade Accepted by Partner!** Contact email & chat unlocked below.")
                             st.write(f"📧 **Partner Email:** {recipient.get('contact_email', 'N/A')}")
                             st.divider()
-                            render_chat_window(prop["id"], user_id)
+                            render_chat_window(prop["id"], user_id, prop["recipient_id"])
                                 
         except Exception as e:
             st.error(f"Error loading sent proposals: {e}")
 
 
 # -----------------------------------------------------------------------------
-# 8. BUSINESS PROFILE MODULE
+# 9. BUSINESS PROFILE MODULE
 # -----------------------------------------------------------------------------
 def render_business_profile(user_id):
     st.subheader("🏢 Business Profile & Brand Showcase")
@@ -704,11 +782,20 @@ def render_business_profile(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 9. MAIN APPLICATION DASHBOARD
+# 10. MAIN APPLICATION DASHBOARD
 # -----------------------------------------------------------------------------
 def main_app():
     user = st.session_state.user
     
+    # Unread notifications count
+    unread_count = 0
+    try:
+        notif_res = supabase.table("notifications").select("id").eq("user_id", user.id).eq("is_read", False).execute()
+        if notif_res.data:
+            unread_count = len(notif_res.data)
+    except Exception:
+        pass
+
     is_admin = False
     try:
         my_prof_res = supabase.table("profiles").select("is_admin").eq("id", user.id).execute()
@@ -720,6 +807,8 @@ def main_app():
     with st.sidebar:
         st.title("🤝 TradeIt B2B")
         st.write(f"Logged in as:\n**{user.email}**")
+        if unread_count > 0:
+            st.warning(f"🔔 **{unread_count} Unread Notification(s)**")
         if is_admin:
             st.success("🛡️ Admin Status Active")
         st.divider()
@@ -728,7 +817,8 @@ def main_app():
             st.session_state.user = None
             st.rerun()
 
-    tabs_list = ["🌐 Barter Feed", "⚡ Smart Matches", "➕ Create Post", "📋 My Listings", "📬 Trade Proposals", "📊 ROI Analytics", "🏢 Business Profile"]
+    notif_label = f"🔔 Notifications ({unread_count})" if unread_count > 0 else "🔔 Notifications"
+    tabs_list = ["🌐 Barter Feed", "⚡ Smart Matches", "➕ Create Post", "📋 My Listings", "📬 Trade Proposals", notif_label, "📊 ROI Analytics", "🏢 Business Profile"]
     if is_admin:
         tabs_list.append("🛡️ Admin Panel")
 
@@ -739,8 +829,9 @@ def main_app():
     tab_create = tabs[2]
     tab_my_listings = tabs[3]
     tab_proposals = tabs[4]
-    tab_analytics = tabs[5]
-    tab_profile = tabs[6]
+    tab_notifs = tabs[5]
+    tab_analytics = tabs[6]
+    tab_profile = tabs[7]
 
     my_posts_res = supabase.table("posts").select("*").eq("user_id", user.id).execute()
     my_active_posts = my_posts_res.data or []
@@ -848,6 +939,13 @@ def main_app():
                                                     "cash_payer_id": payer_id if cash_topup_val > 0 else None,
                                                     "message": proposal_msg
                                                 }).execute()
+
+                                                send_notification(
+                                                    user_id=post["user_id"],
+                                                    title="📬 New Trade Proposal Received",
+                                                    message=f"You received a new barter proposal for '{post['title']}'."
+                                                )
+
                                                 st.toast("Trade proposal sent!", icon="🚀")
                                                 st.rerun()
 
@@ -892,22 +990,26 @@ def main_app():
     with tab_proposals:
         render_trade_proposals(user.id)
 
-    # --- TAB 6: ROI ANALYTICS ---
+    # --- TAB 6: NOTIFICATIONS ---
+    with tab_notifs:
+        render_notifications_feed(user.id)
+
+    # --- TAB 7: ROI ANALYTICS ---
     with tab_analytics:
         render_analytics_dashboard(user.id)
 
-    # --- TAB 7: BUSINESS PROFILE ---
+    # --- TAB 8: BUSINESS PROFILE ---
     with tab_profile:
         render_business_profile(user.id)
 
-    # --- TAB 8: ADMIN PANEL (IF APPLICABLE) ---
+    # --- TAB 9: ADMIN PANEL (IF APPLICABLE) ---
     if is_admin:
-        with tabs[7]:
+        with tabs[8]:
             render_admin_panel()
 
 
 # -----------------------------------------------------------------------------
-# 10. ENTRY POINT
+# 11. ENTRY POINT
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
     if not st.session_state.user:
