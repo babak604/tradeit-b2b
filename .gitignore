@@ -1,0 +1,23 @@
+# Environment variables & secrets (CRITICAL)
+.env
+.env.local
+.env.*
+.streamlit/secrets.toml
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# Streamlit & IDE settings
+.vscode/
+.idea/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+node_modules

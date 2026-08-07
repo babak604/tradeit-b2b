@@ -1,0 +1,54 @@
+{
+  "name": "tradeit-b2b",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "rimraf .next && next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test:unit": "jest --runInBand",
+    "test:e2e": "playwright test",
+    "test:dispute": "tsx scripts/test-dispute-lifecycle.ts",
+    "test:all": "npm run test:unit && npm run test:e2e"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.1.0",
+    "@ducanh2912/next-pwa": "^10.2.9",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.112.0",
+    "ai": "^4.1.17",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.475.0",
+    "next": "^15.1.7",
+    "pdfkit": "^0.19.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "resend": "^6.18.1",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.0.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@tailwindcss/postcss": "^4.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.17.19",
+    "@types/pdfkit": "^0.17.6",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.20.1",
+    "eslint-config-next": "^15.1.7",
+    "jest": "^30.4.2",
+    "rimraf": "^6.0.1",
+    "tailwindcss": "^4.0.6",
+    "ts-jest": "^29.4.12",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

@@ -1,0 +1,39 @@
+// app/api/deals/[id]/escrow/route.ts
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { action, role } = await request.json();
+    const dealId = params.id;
+
+    let updatePayload: Record<string, any> = {};
+
+    if (action === 'sign') {
+      updatePayload[role === 'A' ? 'signed_a' : 'signed_b'] = true;
+    } else if (action === 'lock') {
+      updatePayload[role === 'A' ? 'is_escrow_locked_a' : 'is_escrow_locked_b'] = true;
+    } else if (action === 'complete') {
+      updatePayload['status'] = 'completed';
+    }
+
+    const { error } = await supabase
+      .from('barter_deals')
+      .update(updatePayload)
+      .eq('id', dealId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ message: err.message }, { status: 400 });
+  }
+}

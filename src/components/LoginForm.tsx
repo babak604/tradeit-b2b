@@ -1,0 +1,115 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export default function LoginForm() {
+  const router = useRouter();
+  const [email, setEmail] = useState("test_buyer@tradeit.com");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/test-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate test session");
+      }
+
+      if (data.hashedToken) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: data.hashedToken,
+          type: "magiclink",
+        });
+
+        if (verifyError) {
+          throw new Error(verifyError.message);
+        }
+      }
+
+      localStorage.setItem("tradeit_test_user", email);
+      router.push("/deal-room");
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected error occurred.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      {errorMessage && (
+        <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 border border-red-200">
+          {errorMessage}
+        </div>
+      )}
+
+      <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        <div className="space-y-4 rounded-md shadow-sm">
+          <div>
+            <label 
+              htmlFor="email-address" 
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Email address
+            </label>
+            <input
+              id="email-address"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="relative block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+              placeholder="Email address"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <button
+            type="button"
+            onClick={() => setEmail("test_buyer@tradeit.com")}
+            className="font-medium text-indigo-600 hover:text-indigo-500"
+          >
+            Fill Test Buyer
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmail("test_seller@tradeit.com")}
+            className="font-medium text-indigo-600 hover:text-indigo-500"
+          >
+            Fill Test Seller
+          </button>
+        </div>
+
+        <div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="group relative flex w-full justify-center rounded-lg border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign in to Deal Room"}
+          </button>
+        </div>
+      </form>
+    </>
+  );
+}
