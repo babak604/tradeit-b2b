@@ -14,7 +14,7 @@ st.set_page_config(
 
 # Hardcoded fallback URL (Keep key empty so GitHub Secret Scanner does not block pushes)
 HARDCODED_SUPABASE_URL = "https://udwmxzbpmkhimzctoemg.supabase.co"
-HARDCODED_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkd214emJwbWtoaW16Y3RvZW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNzM3OTcsImV4cCI6MjEwMDc0OTc5N30.P-Gca7vdp6XT0S3WX7xXqpun295Ykf9CsjoUo5-8Y2U"
+HARDCODED_SUPABASE_KEY = ""
 
 # Load variables from .env.local if python-dotenv is available locally
 try:
@@ -33,14 +33,14 @@ def fetch_secret(key_name):
         pass
     return os.getenv(key_name)
 
-SUPABASE_URL = fetch_secret("SUPABASE_URL") or HARDCODED_SUPABASE_URL
-SUPABASE_KEY = fetch_secret("SUPABASE_KEY") or fetch_secret("SUPABASE_ANON_KEY") or HARDCODED_SUPABASE_KEY
+SUPABASE_URL = fetch_secret("SUPABASE_URL") or fetch_secret("NEXT_PUBLIC_SUPABASE_URL") or HARDCODED_SUPABASE_URL
+SUPABASE_KEY = fetch_secret("SUPABASE_KEY") or fetch_secret("SUPABASE_ANON_KEY") or fetch_secret("NEXT_PUBLIC_SUPABASE_ANON_KEY") or HARDCODED_SUPABASE_KEY
 
 if not SUPABASE_KEY:
     st.error("⚠️ **Supabase Anon Key missing!**")
     st.info(
         "Please add `SUPABASE_KEY` to your Streamlit Cloud **Secrets** (under Settings) "
-        "or set it in your local `.env.local` file."
+        "or set it in your local `.env.local` or `.streamlit/secrets.toml` file."
     )
     st.stop()
 
@@ -178,64 +178,62 @@ def render_my_listings(user_id):
                 if post.get("image_url"):
                     render_media(post["image_url"], width=250)
 
-        # --- ENHANCED ACCEPTED TRADE VIEW WITH BARTER AGREEMENT ---
-if status == "accepted":
-    st.success("🎉 **Trade Agreement Active!** Contact details unlocked below.")
-    
-    # Partner Information Card
-    with st.expander("📄 View Formal Barter Summary & Contact Details", expanded=True):
-        st.markdown(f"### 🤝 Trade Agreement #{prop['id'][:8].upper()}")
-        st.caption(f"**Date Executed:** {prop['created_at'][:10]}")
-        
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            st.markdown("#### Party A (Proposer)")
-            st.write(f"**Company:** {proposer.get('business_name', 'N/A')}")
-            st.write(f"**Email:** {proposer.get('contact_email', 'N/A')}")
-            st.write(f"**Offered Scope:** {offered.get('title', 'N/A')}")
-            
-        with col_p2:
-            st.markdown("#### Party B (Recipient - You)")
-            st.write(f"**Company:** Your Business")
-            st.write(f"**Agreed Scope:** {target.get('title', 'N/A')}")
-            
-        st.divider()
-        st.markdown("**Notes / Special Terms:**")
-        st.write(prop.get("message") or "*No custom notes attached.*")
-        
-        # Downloadable Agreement Summary
-        agreement_text = f"""====================================================================
-TRADEIT B2B BARTER AGREEMENT SUMMARY
-Agreement Reference: {prop['id']}
-Date: {prop['created_at'][:10]}
-====================================================================
+            with col_actions:
+                st.write("**Actions**")
+                
+                with st.popover("✏️ Edit"):
+                    st.markdown(f"**Edit Post:** {post['title']}")
+                    with st.form(key=f"edit_form_{post['id']}"):
+                        edit_title = st.text_input("Title", value=post["title"])
+                        edit_type = st.selectbox(
+                            "Type", 
+                            ["Offer", "Need"], 
+                            index=0 if p_type == "Offer" else 1
+                        )
+                        edit_category = st.text_input("Category", value=post.get("category", "General"))
+                        edit_desc = st.text_area("Description", value=post.get("description", ""))
+                        
+                        st.caption("Upload new media to replace existing:")
+                        new_uploaded_file = st.file_uploader(
+                            "Replace Media File", 
+                            type=["png", "jpg", "jpeg", "webp", "mp4", "mov", "webm"],
+                            key=f"file_edit_{post['id']}"
+                        )
+                        edit_image_url = st.text_input("Or Media URL", value=post.get("image_url") or "", key=f"url_edit_{post['id']}")
+                        
+                        save_btn = st.form_submit_button("Save Changes", type="primary")
+                        if save_btn:
+                            try:
+                                final_media_url = post.get("image_url")
+                                
+                                if new_uploaded_file:
+                                    final_media_url = upload_file_to_supabase(new_uploaded_file, user_id)
+                                elif edit_image_url:
+                                    final_media_url = edit_image_url
+                                
+                                supabase.table("posts").update({
+                                    "title": edit_title,
+                                    "type": edit_type,
+                                    "post_type": edit_type,
+                                    "category": edit_category,
+                                    "description": edit_desc,
+                                    "image_url": final_media_url
+                                }).eq("id", post["id"]).execute()
+                                
+                                st.toast("Post updated successfully!", icon="✅")
+                                st.rerun()
+                            except Exception as err:
+                                st.error(f"Failed to update post: {err}")
 
-PARTY A (PROPOSER):
-Business: {proposer.get('business_name')}
-Email: {proposer.get('contact_email')}
-Provided Item/Service: {offered.get('title')}
-Description: {offered.get('description')}
+                if st.button("🗑️ Delete", key=f"del_{post['id']}", type="secondary"):
+                    try:
+                        supabase.table("posts").delete().eq("id", post["id"]).execute()
+                        st.toast("Post deleted!", icon="🗑️")
+                        st.rerun()
+                    except Exception as err:
+                        st.error(f"Failed to delete post: {err}")
 
-PARTY B (RECIPIENT):
-Provided Item/Service: {target.get('title')}
-Description: {target.get('description')}
 
-TERMS & CONDITIONS:
-This digital agreement confirms a mutual B2B barter swap between the above parties.
-Both parties agree to deliver their respective services in good faith as specified.
-
-Generated automatically via TradeIt B2B Marketplace.
-===================================================================="""
-        
-        st.download_button(
-            label="📥 Download Agreement Receipt (.txt)",
-            data=agreement_text,
-            file_name=f"TradeIt_Agreement_{prop['id'][:8]}.txt",
-            mime="text/plain",
-            key=f"dl_agreed_{prop['id']}"
-        )
-
-# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # 5. TRADE PROPOSALS COMPONENT
 # -----------------------------------------------------------------------------
@@ -424,7 +422,6 @@ Generated automatically via TradeIt B2B Marketplace.
 def render_business_profile(user_id):
     st.subheader("🏢 Business Profile & Brand Showcase")
     
-    # Fetch user's current profile data
     try:
         prof_res = supabase.table("profiles").select("*").eq("id", user_id).execute()
         profile_data = prof_res.data[0] if prof_res.data else {}
@@ -434,7 +431,6 @@ def render_business_profile(user_id):
 
     tab_view_prof, tab_edit_prof = st.tabs(["👁️ View Profile Showcase", "✏️ Edit Company Details"])
 
-    # --- SUB-TAB 1: VIEW SHOWCASE ---
     with tab_view_prof:
         with st.container(border=True):
             col_logo, col_info = st.columns([1, 3])
@@ -460,7 +456,6 @@ def render_business_profile(user_id):
         st.divider()
         st.markdown("### 📦 Active Barter Showcase")
         
-        # Display user's own listings in showcase format
         posts_res = supabase.table("posts").select("*").eq("user_id", user_id).execute()
         user_posts = posts_res.data or []
         
@@ -478,7 +473,6 @@ def render_business_profile(user_id):
                         if p.get("image_url"):
                             render_media(p["image_url"], width=200)
 
-    # --- SUB-TAB 2: EDIT PROFILE ---
     with tab_edit_prof:
         with st.form("edit_profile_form"):
             st.markdown("### Edit Business Information")
@@ -524,7 +518,6 @@ def render_business_profile(user_id):
 def main_app():
     user = st.session_state.user
     
-    # Sidebar
     with st.sidebar:
         st.title("🤝 TradeIt B2B")
         st.write(f"Logged in as:\n**{user.email}**")
@@ -535,12 +528,10 @@ def main_app():
             st.session_state.user = None
             st.rerun()
 
-    # Navigation Tabs
     tab_feed, tab_create, tab_my_listings, tab_proposals, tab_profile = st.tabs([
         "🌐 Barter Feed", "➕ Create Post", "📋 My Listings", "📬 Trade Proposals", "🏢 Business Profile"
     ])
 
-    # Pre-fetch user's active posts for proposal modals
     my_posts_res = supabase.table("posts").select("id, title, type, post_type").eq("user_id", user.id).execute()
     my_active_posts = my_posts_res.data or []
 
@@ -555,7 +546,6 @@ def main_app():
             if not all_posts:
                 st.info("No barter posts available yet. Be the first to post an offer or need!")
             else:
-                # Search & Filter Controls
                 with st.container(border=True):
                     col_search, col_cat, col_type = st.columns([2, 1, 1])
                     
@@ -576,7 +566,6 @@ def main_app():
                     with col_type:
                         selected_type = st.radio("📌 Type", options=["All", "Offers", "Needs"], horizontal=True)
 
-                # Filtering logic
                 filtered_posts = all_posts
 
                 if search_term.strip():
