@@ -78,7 +78,6 @@ def render_media(url, width=350):
         st.image(url, width=width)
 
 def send_notification(user_id, title, message):
-    """Inserts an automated notification into the database."""
     try:
         supabase.table("notifications").insert({
             "user_id": user_id,
@@ -121,7 +120,6 @@ def render_chat_window(proposal_id, user_id, recipient_id):
                     "content": new_msg.strip()
                 }).execute()
 
-                # Trigger Chat Notification
                 send_notification(
                     user_id=recipient_id,
                     title="💬 New Trade Message Received",
@@ -133,7 +131,80 @@ def render_chat_window(proposal_id, user_id, recipient_id):
 
 
 # -----------------------------------------------------------------------------
-# 3. NOTIFICATION FEED COMPONENT
+# 3. MILESTONE TRACKER MODULE
+# -----------------------------------------------------------------------------
+def render_milestones_tracker(prop, user_id):
+    st.markdown("#### 🎯 Deliverable Milestones & Sign-Off")
+    proposal_id = prop["id"]
+    is_proposer = (user_id == prop["proposer_id"])
+    partner_id = prop["recipient_id"] if is_proposer else prop["proposer_id"]
+
+    try:
+        ms_res = supabase.table("trade_milestones").select("*").eq("proposal_id", proposal_id).order("created_at", asc=True).execute()
+        milestones = ms_res.data or []
+
+        if milestones:
+            completed_count = 0
+            for ms in milestones:
+                p_done = ms.get("is_completed_proposer", False)
+                r_done = ms.get("is_completed_recipient", False)
+                both_done = p_done and r_done
+                if both_done:
+                    completed_count += 1
+
+                status_text = "✅ Approved by Both" if both_done else ("⏳ Pending Approval" if (p_done or r_done) else "⚪ In Progress")
+                
+                with st.container(border=True):
+                    col_m1, col_m2 = st.columns([3, 1])
+                    with col_m1:
+                        st.markdown(f"**Milestone:** {ms['title']}")
+                        st.caption(f"Status: {status_text}")
+                    with col_m2:
+                        my_status = p_done if is_proposer else r_done
+                        if not my_status:
+                            if st.button("Sign Off", key=f"ms_sign_{ms['id']}"):
+                                update_field = "is_completed_proposer" if is_proposer else "is_completed_recipient"
+                                supabase.table("trade_milestones").update({update_field: True}).eq("id", ms["id"]).execute()
+                                
+                                send_notification(
+                                    user_id=partner_id,
+                                    title="🎯 Milestone Signed Off",
+                                    message=f"Partner signed off on milestone: '{ms['title']}'."
+                                )
+                                st.toast("Milestone signed off!", icon="✅")
+                                st.rerun()
+                        else:
+                            st.success("Signed Off")
+
+            st.caption(f"Progress: **{completed_count}/{len(milestones)}** Milestones Completed")
+            if completed_count == len(milestones) and len(milestones) > 0 and prop["status"] != "completed":
+                if st.button("🏆 Mark Entire Trade as Completed", type="primary", key=f"complete_trade_{proposal_id}"):
+                    supabase.table("trade_proposals").update({"status": "completed"}).eq("id", proposal_id).execute()
+                    send_notification(user_id=partner_id, title="🏆 Trade Completed!", message="All milestones signed off and trade completed.")
+                    st.toast("Trade successfully completed!", icon="🏆")
+                    st.rerun()
+        else:
+            st.info("No deliverable milestones added yet.")
+
+        # Add New Milestone Form
+        with st.popover("➕ Add Milestone", use_container_width=False):
+            with st.form(key=f"add_ms_form_{proposal_id}"):
+                ms_title = st.text_input("Milestone Title", placeholder="e.g. Initial Wireframe Approval")
+                submit_ms = st.form_submit_button("Add Milestone", type="primary")
+                if submit_ms and ms_title.strip():
+                    supabase.table("trade_milestones").insert({
+                        "proposal_id": proposal_id,
+                        "title": ms_title.strip()
+                    }).execute()
+                    st.toast("Milestone added!", icon="🎯")
+                    st.rerun()
+
+    except Exception as e:
+        st.error(f"Error loading milestones: {e}")
+
+
+# -----------------------------------------------------------------------------
+# 4. NOTIFICATION FEED COMPONENT
 # -----------------------------------------------------------------------------
 def render_notifications_feed(user_id):
     st.subheader("🔔 Activity & System Notifications")
@@ -165,7 +236,7 @@ def render_notifications_feed(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 4. SMART MATCHMAKING & ANALYTICS MODULES
+# 5. SMART MATCHMAKING & ANALYTICS MODULES
 # -----------------------------------------------------------------------------
 def render_smart_matches(user_id, my_posts):
     st.subheader("⚡ Automated Barter Matchmaker")
@@ -327,7 +398,7 @@ def render_analytics_dashboard(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 5. ADMIN & MODERATION PANEL
+# 6. ADMIN & MODERATION PANEL
 # -----------------------------------------------------------------------------
 def render_admin_panel():
     st.subheader("🛡️ Platform Admin & Moderation Operations")
@@ -375,7 +446,7 @@ def render_admin_panel():
                             send_notification(
                                 user_id=p["id"],
                                 title="🏢 Verification Status Updated",
-                                message=f"Your business profile verification status has been set to: {btn_label}d."
+                                message=f"Your business profile verification status has been updated to: {btn_label}d."
                             )
 
                             st.toast("Updated verification status!", icon="✅")
@@ -386,7 +457,7 @@ def render_admin_panel():
 
 
 # -----------------------------------------------------------------------------
-# 6. AUTHENTICATION MODULE
+# 7. AUTHENTICATION MODULE
 # -----------------------------------------------------------------------------
 def render_auth_page():
     st.title("🤝 Welcome to TradeIt")
@@ -441,7 +512,7 @@ def render_auth_page():
 
 
 # -----------------------------------------------------------------------------
-# 7. MY LISTINGS COMPONENT
+# 8. MY LISTINGS COMPONENT
 # -----------------------------------------------------------------------------
 def render_my_listings(user_id):
     st.subheader("📋 My Active Listings")
@@ -528,7 +599,7 @@ def render_my_listings(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 8. TRADE PROPOSALS COMPONENT
+# 9. TRADE PROPOSALS COMPONENT
 # -----------------------------------------------------------------------------
 def render_trade_proposals(user_id):
     st.subheader("📬 Trade Proposals Inbox")
@@ -616,9 +687,9 @@ def render_trade_proposals(user_id):
                                     st.rerun()
 
                         if status in ["accepted", "completed"]:
-                            st.success("🎉 **Trade Agreement Active!** Contact details and chat unlocked below.")
+                            st.success("🎉 **Trade Agreement Active!** Contact details, chat & milestones unlocked below.")
                             
-                            with st.expander("📄 View Formal Barter Summary & Contract", expanded=True):
+                            with st.expander("📄 View Formal Barter Summary & Contract", expanded=False):
                                 st.markdown(f"### 🤝 Trade Agreement #{prop['id'][:8].upper()}")
                                 st.caption(f"**Date Executed:** {prop['created_at'][:10]}")
                                 
@@ -646,6 +717,10 @@ CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
                                 st.download_button("📥 Download Contract (.txt)", agreement_text, file_name=f"TradeIt_Agreement_{prop['id'][:8]}.txt", key=f"dl_agreed_{prop['id']}")
                             
                             st.divider()
+                            # Deliverable Milestones Section
+                            render_milestones_tracker(prop, user_id)
+                            st.divider()
+                            # Chat Section
                             render_chat_window(prop["id"], user_id, prop["proposer_id"])
                                     
         except Exception as e:
@@ -701,9 +776,13 @@ CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
                                 st.rerun()
 
                         if status in ["accepted", "completed"]:
-                            st.success("🎉 **Trade Accepted by Partner!** Contact email & chat unlocked below.")
+                            st.success("🎉 **Trade Accepted by Partner!** Contact email, chat & milestones unlocked below.")
                             st.write(f"📧 **Partner Email:** {recipient.get('contact_email', 'N/A')}")
                             st.divider()
+                            # Deliverable Milestones Section
+                            render_milestones_tracker(prop, user_id)
+                            st.divider()
+                            # Chat Section
                             render_chat_window(prop["id"], user_id, prop["recipient_id"])
                                 
         except Exception as e:
@@ -711,7 +790,7 @@ CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
 
 
 # -----------------------------------------------------------------------------
-# 9. BUSINESS PROFILE MODULE
+# 10. BUSINESS PROFILE MODULE
 # -----------------------------------------------------------------------------
 def render_business_profile(user_id):
     st.subheader("🏢 Business Profile & Brand Showcase")
@@ -782,12 +861,11 @@ def render_business_profile(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 10. MAIN APPLICATION DASHBOARD
+# 11. MAIN APPLICATION DASHBOARD
 # -----------------------------------------------------------------------------
 def main_app():
     user = st.session_state.user
     
-    # Unread notifications count
     unread_count = 0
     try:
         notif_res = supabase.table("notifications").select("id").eq("user_id", user.id).eq("is_read", False).execute()
@@ -1009,7 +1087,7 @@ def main_app():
 
 
 # -----------------------------------------------------------------------------
-# 11. ENTRY POINT
+# 12. ENTRY POINT
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
     if not st.session_state.user:
