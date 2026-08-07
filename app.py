@@ -236,6 +236,7 @@ Generated automatically via TradeIt B2B Marketplace.
         )
 
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # 5. TRADE PROPOSALS COMPONENT
 # -----------------------------------------------------------------------------
 def render_trade_proposals(user_id):
@@ -301,6 +302,60 @@ def render_trade_proposals(user_id):
                                     supabase.table("trade_proposals").update({"status": "declined"}).eq("id", prop["id"]).execute()
                                     st.toast("Trade proposal declined.", icon="ℹ️")
                                     st.rerun()
+
+                        if status == "accepted":
+                            st.success("🎉 **Trade Agreement Active!** Contact details unlocked below.")
+                            
+                            with st.expander("📄 View Formal Barter Summary & Contact Details", expanded=True):
+                                st.markdown(f"### 🤝 Trade Agreement #{prop['id'][:8].upper()}")
+                                st.caption(f"**Date Executed:** {prop['created_at'][:10]}")
+                                
+                                col_p1, col_p2 = st.columns(2)
+                                with col_p1:
+                                    st.markdown("#### Party A (Proposer)")
+                                    st.write(f"**Company:** {proposer.get('business_name', 'N/A')}")
+                                    st.write(f"**Email:** {proposer.get('contact_email', 'N/A')}")
+                                    st.write(f"**Offered Scope:** {offered.get('title', 'N/A')}")
+                                    
+                                with col_p2:
+                                    st.markdown("#### Party B (Recipient - You)")
+                                    st.write(f"**Company:** Your Business")
+                                    st.write(f"**Agreed Scope:** {target.get('title', 'N/A')}")
+                                    
+                                st.divider()
+                                st.markdown("**Notes / Special Terms:**")
+                                st.write(prop.get("message") or "*No custom notes attached.*")
+                                
+                                agreement_text = f"""====================================================================
+TRADEIT B2B BARTER AGREEMENT SUMMARY
+Agreement Reference: {prop['id']}
+Date: {prop['created_at'][:10]}
+====================================================================
+
+PARTY A (PROPOSER):
+Business: {proposer.get('business_name')}
+Email: {proposer.get('contact_email')}
+Provided Item/Service: {offered.get('title')}
+Description: {offered.get('description')}
+
+PARTY B (RECIPIENT):
+Provided Item/Service: {target.get('title')}
+Description: {target.get('description')}
+
+TERMS & CONDITIONS:
+This digital agreement confirms a mutual B2B barter swap between the above parties.
+Both parties agree to deliver their respective services in good faith as specified.
+
+Generated automatically via TradeIt B2B Marketplace.
+===================================================================="""
+                                
+                                st.download_button(
+                                    label="📥 Download Agreement Receipt (.txt)",
+                                    data=agreement_text,
+                                    file_name=f"TradeIt_Agreement_{prop['id'][:8]}.txt",
+                                    mime="text/plain",
+                                    key=f"dl_agreed_{prop['id']}"
+                                )
                                     
         except Exception as e:
             st.error(f"Error loading received proposals: {e}")
@@ -354,6 +409,10 @@ def render_trade_proposals(user_id):
                                 supabase.table("trade_proposals").update({"status": "cancelled"}).eq("id", prop["id"]).execute()
                                 st.toast("Proposal cancelled.", icon="🗑️")
                                 st.rerun()
+
+                        if status == "accepted":
+                            st.success("🎉 **Trade Accepted by Partner!** Contact email unlocked.")
+                            st.write(f"📧 **Partner Email:** {recipient.get('contact_email', 'N/A')}")
                                 
         except Exception as e:
             st.error(f"Error loading sent proposals: {e}")
