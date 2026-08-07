@@ -56,7 +56,7 @@ if "user" not in st.session_state:
 
 
 # -----------------------------------------------------------------------------
-# 2. HELPER FUNCTIONS FOR STORAGE & MEDIA RENDERING
+# 2. HELPER FUNCTIONS FOR STORAGE, MEDIA & CHAT
 # -----------------------------------------------------------------------------
 def upload_file_to_supabase(uploaded_file, user_id, folder="media"):
     """Uploads a file to the 'barter-media' Supabase Storage bucket."""
@@ -89,6 +89,49 @@ def render_media(url, width=350):
         st.video(url)
     else:
         st.image(url, width=width)
+
+def render_chat_window(proposal_id, user_id):
+    """Renders real-time message history and a send form for an active trade proposal."""
+    try:
+        msgs_res = supabase.table("messages") \
+            .select("*, sender:profiles(business_name)") \
+            .eq("proposal_id", proposal_id) \
+            .order("created_at", asc=True) \
+            .execute()
+        messages = msgs_res.data or []
+
+        st.markdown("#### 💬 Partner Messages & Updates")
+        
+        # Message History Box
+        chat_container = st.container(height=250, border=True)
+        with chat_container:
+            if not messages:
+                st.caption("No messages yet. Send a message below to coordinate deliverables.")
+            for msg in messages:
+                sender_name = (msg.get("sender") or {}).get("business_name") or "User"
+                is_me = (msg["sender_id"] == user_id)
+                prefix = "👤 **You**" if is_me else f"🏢 **{sender_name}**"
+                time_str = msg['created_at'][11:16] if len(msg.get('created_at', '')) >= 16 else ""
+                
+                st.markdown(f"{prefix} *({time_str})*")
+                st.write(msg["content"])
+                st.divider()
+
+        # Send Message Form
+        with st.form(key=f"msg_form_{proposal_id}", clear_on_submit=True):
+            new_msg = st.text_input("Type your message...", placeholder="e.g. Hi! Let's schedule a call on Monday.")
+            send_btn = st.form_submit_button("Send Message", type="primary")
+            
+            if send_btn and new_msg.strip():
+                supabase.table("messages").insert({
+                    "proposal_id": proposal_id,
+                    "sender_id": user_id,
+                    "content": new_msg.strip()
+                }).execute()
+                st.rerun()
+
+    except Exception as e:
+        st.error(f"Error loading chat: {e}")
 
 
 # -----------------------------------------------------------------------------
@@ -302,7 +345,7 @@ def render_trade_proposals(user_id):
                                     st.rerun()
 
                         if status == "accepted":
-                            st.success("🎉 **Trade Agreement Active!** Contact details unlocked below.")
+                            st.success("🎉 **Trade Agreement Active!** Contact details and chat unlocked below.")
                             
                             with st.expander("📄 View Formal Barter Summary & Contact Details", expanded=True):
                                 st.markdown(f"### 🤝 Trade Agreement #{prop['id'][:8].upper()}")
@@ -354,6 +397,10 @@ Generated automatically via TradeIt B2B Marketplace.
                                     mime="text/plain",
                                     key=f"dl_agreed_{prop['id']}"
                                 )
+                            
+                            st.divider()
+                            # Render Chat Box for Active Trade
+                            render_chat_window(prop["id"], user_id)
                                     
         except Exception as e:
             st.error(f"Error loading received proposals: {e}")
@@ -409,8 +456,11 @@ Generated automatically via TradeIt B2B Marketplace.
                                 st.rerun()
 
                         if status == "accepted":
-                            st.success("🎉 **Trade Accepted by Partner!** Contact email unlocked.")
+                            st.success("🎉 **Trade Accepted by Partner!** Contact email & chat unlocked below.")
                             st.write(f"📧 **Partner Email:** {recipient.get('contact_email', 'N/A')}")
+                            st.divider()
+                            # Render Chat Box for Active Trade
+                            render_chat_window(prop["id"], user_id)
                                 
         except Exception as e:
             st.error(f"Error loading sent proposals: {e}")
