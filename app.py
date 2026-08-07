@@ -1,5 +1,6 @@
 import os
 import uuid
+import pandas as pd
 import streamlit as st
 from supabase import create_client
 
@@ -149,7 +150,6 @@ def render_smart_matches(user_id, my_posts):
                 other_cat = (other_post.get("category") or "").lower().strip()
                 other_title = (other_post.get("title") or "").lower()
 
-                # Calculate compatibility match
                 match_score = 0
                 if need_cat and need_cat == other_cat:
                     match_score += 60
@@ -203,23 +203,24 @@ def render_smart_matches(user_id, my_posts):
         st.error(f"Error executing matchmaker: {e}")
 
 def render_analytics_dashboard(user_id):
-    st.subheader("📊 Barter Performance & ROI Analytics")
+    st.subheader("📊 Barter Performance & Accounting ROI Dashboard")
     
     try:
-        props_res = supabase.table("trade_proposals").select("*").or_(f"proposer_id.eq.{user_id},recipient_id.eq.{user_id}").execute()
+        props_res = supabase.table("trade_proposals") \
+            .select("*, target:posts!target_post_id(*), offered:posts!offered_post_id(*), proposer:profiles!proposer_id(*), recipient:profiles!recipient_id(*)") \
+            .or_(f"proposer_id.eq.{user_id},recipient_id.eq.{user_id}") \
+            .execute()
         proposals = props_res.data or []
 
         posts_res = supabase.table("posts").select("*").eq("user_id", user_id).execute()
         user_posts = posts_res.data or []
 
-        reviews_res = supabase.table("reviews").select("rating").eq("reviewee_id", user_id).execute()
-        reviews = reviews_res.data or []
-
-        completed_count = sum(1 for p in proposals if p.get("status") in ["accepted", "completed"])
+        completed_trades = [p for p in proposals if p.get("status") in ["accepted", "completed"]]
+        completed_count = len(completed_trades)
         pending_count = sum(1 for p in proposals if p.get("status") == "pending")
-        est_cash_saved = completed_count * 1250  # Average B2B service value benchmark
+        est_cash_saved = completed_count * 1250
 
-        # Metric Cards
+        # Metrics Overview
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Active Listings", len(user_posts))
@@ -232,35 +233,101 @@ def render_analytics_dashboard(user_id):
 
         st.divider()
 
-        col_left, col_right = st.columns(2)
-        with col_left:
-            st.markdown("### 📈 Network Trade Status Breakdown")
-            if not proposals:
-                st.info("No trade activity logged yet.")
-            else:
-                statuses = {}
-                for p in proposals:
-                    st_name = p.get("status", "pending").upper()
-                    statuses[st_name] = statuses.get(st_name, 0) + 1
-                
-                for k, v in statuses.items():
-                    st.write(f"• **{k}:** {v} proposals")
+        # CSV Tax Export Section
+        st.markdown("### 📄 Corporate Tax & Audit CSV Exporter")
+        st.caption("Generate an official ledger of all completed barter transactions for corporate income tax reporting.")
 
-        with col_right:
-            st.markdown("### ⭐ Trust & Reputation Score")
-            if reviews:
-                avg_r = sum(r["rating"] for r in reviews) / len(reviews)
-                st.markdown(f"## {render_rating_stars(avg_r)}")
-                st.caption(f"Based on {len(reviews)} verified client reviews")
-            else:
-                st.info("Complete trades to earn your first verified partner rating!")
+        if completed_trades:
+            export_rows = []
+            for t in completed_trades:
+                target = t.get("target") or {}
+                offered = t.get("offered") or {}
+                proposer = t.get("proposer") or {}
+                recipient = t.get("recipient") or {}
+
+                export_rows.append({
+                    "Transaction_ID": t["id"],
+                    "Date": t["created_at"][:10],
+                    "Proposer_Company": proposer.get("business_name"),
+                    "Recipient_Company": recipient.get("business_name"),
+                    "Offered_Service": offered.get("title"),
+                    "Received_Service": target.get("title"),
+                    "Status": t["status"].upper(),
+                    "Est_Benchmark_Valuation_CAD": 1250.00
+                })
+
+            df_export = pd.DataFrame(export_rows)
+            st.dataframe(df_export, use_container_width=True)
+
+            csv_data = df_export.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Barter Tax Ledger (.CSV)",
+                data=csv_data,
+                file_name=f"TradeIt_Barter_Tax_Ledger_{user_id[:8]}.csv",
+                mime="text/csv",
+                type="primary"
+            )
+        else:
+            st.info("No completed barter trades logged yet. Complete trades to unlock your tax ledger.")
 
     except Exception as e:
         st.error(f"Error loading analytics: {e}")
 
 
 # -----------------------------------------------------------------------------
-# 4. AUTHENTICATION MODULE
+# 4. ADMIN & MODERATION PANEL
+# -----------------------------------------------------------------------------
+def render_admin_panel():
+    st.subheader("🛡️ Platform Admin & Moderation Operations")
+    
+    try:
+        all_posts_res = supabase.table("posts").select("*, profiles(*)").execute()
+        all_posts = all_posts_res.data or []
+
+        all_profiles_res = supabase.table("profiles").select("*").execute()
+        all_profiles = all_profiles_res.data or []
+
+        tab_mod_posts, tab_mod_users = st.tabs(["📌 Moderate Listings", "🏢 Company Verification"])
+
+        with tab_mod_posts:
+            st.caption(f"Managing **{len(all_posts)}** total listings across the marketplace.")
+            for post in all_posts:
+                prof = post.get("profiles") or {}
+                with st.container(border=True):
+                    col_info, col_btn = st.columns([4, 1])
+                    with col_info:
+                        st.markdown(f"**{post['title']}** (By: {prof.get('business_name', 'Unknown')})")
+                        st.caption(f"Category: {post.get('category')} | Created: {post['created_at'][:10]}")
+                        st.write(post.get("description", "")[:120] + "...")
+                    with col_btn:
+                        if st.button("🗑️ Remove", key=f"admin_del_{post['id']}", type="secondary"):
+                            supabase.table("posts").delete().eq("id", post["id"]).execute()
+                            st.toast("Listing removed by admin", icon="🛡️")
+                            st.rerun()
+
+        with tab_mod_users:
+            st.caption(f"Total Registered Businesses: **{len(all_profiles)}**")
+            for p in all_profiles:
+                with st.container(border=True):
+                    col_u_info, col_u_btn = st.columns([3, 1])
+                    with col_u_info:
+                        v_badge = "✅ Verified" if p.get("is_verified") else "⏳ Unverified"
+                        st.markdown(f"**{p.get('business_name', 'Business')}** ({v_badge})")
+                        st.caption(f"Email: {p.get('contact_email')} | Location: {p.get('location')}")
+                    with col_u_btn:
+                        new_status = not p.get("is_verified", False)
+                        btn_label = "Revoke" if p.get("is_verified") else "Verify"
+                        if st.button(btn_label, key=f"admin_verify_{p['id']}"):
+                            supabase.table("profiles").update({"is_verified": new_status}).eq("id", p["id"]).execute()
+                            st.toast("Updated verification status!", icon="✅")
+                            st.rerun()
+
+    except Exception as e:
+        st.error(f"Admin Panel Error: {e}")
+
+
+# -----------------------------------------------------------------------------
+# 5. AUTHENTICATION MODULE
 # -----------------------------------------------------------------------------
 def render_auth_page():
     st.title("🤝 Welcome to TradeIt")
@@ -315,7 +382,7 @@ def render_auth_page():
 
 
 # -----------------------------------------------------------------------------
-# 5. MY LISTINGS COMPONENT
+# 6. MY LISTINGS COMPONENT
 # -----------------------------------------------------------------------------
 def render_my_listings(user_id):
     st.subheader("📋 My Active Listings")
@@ -402,7 +469,7 @@ def render_my_listings(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 6. TRADE PROPOSALS COMPONENT
+# 7. TRADE PROPOSALS COMPONENT
 # -----------------------------------------------------------------------------
 def render_trade_proposals(user_id):
     st.subheader("📬 Trade Proposals Inbox")
@@ -560,7 +627,7 @@ PARTY B: Recipient Business
 
 
 # -----------------------------------------------------------------------------
-# 7. BUSINESS PROFILE MODULE
+# 8. BUSINESS PROFILE MODULE
 # -----------------------------------------------------------------------------
 def render_business_profile(user_id):
     st.subheader("🏢 Business Profile & Brand Showcase")
@@ -585,7 +652,8 @@ def render_business_profile(user_id):
                     st.info("📷 No logo uploaded yet")
 
             with col_info:
-                st.markdown(f"## {profile_data.get('business_name', 'Business Name')}")
+                v_badge = " ✅ Verified Business" if profile_data.get("is_verified") else ""
+                st.markdown(f"## {profile_data.get('business_name', 'Business Name')}{v_badge}")
                 st.caption(f"📍 **Location:** {profile_data.get('location', 'Not set')} | 📧 **Email:** {profile_data.get('contact_email', 'Not set')}")
                 
                 website = profile_data.get("website")
@@ -630,23 +698,44 @@ def render_business_profile(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 8. MAIN APPLICATION DASHBOARD
+# 9. MAIN APPLICATION DASHBOARD
 # -----------------------------------------------------------------------------
 def main_app():
     user = st.session_state.user
     
+    # Check if current user is an admin
+    is_admin = False
+    try:
+        my_prof_res = supabase.table("profiles").select("is_admin").eq("id", user.id).execute()
+        if my_prof_res.data:
+            is_admin = my_prof_res.data[0].get("is_admin", False)
+    except Exception:
+        pass
+
     with st.sidebar:
         st.title("🤝 TradeIt B2B")
         st.write(f"Logged in as:\n**{user.email}**")
+        if is_admin:
+            st.success("🛡️ Admin Status Active")
         st.divider()
         if st.button("Sign Out", type="secondary"):
             supabase.auth.sign_out()
             st.session_state.user = None
             st.rerun()
 
-    tab_feed, tab_match, tab_create, tab_my_listings, tab_proposals, tab_analytics, tab_profile = st.tabs([
-        "🌐 Barter Feed", "⚡ Smart Matches", "➕ Create Post", "📋 My Listings", "📬 Trade Proposals", "📊 ROI Analytics", "🏢 Business Profile"
-    ])
+    tabs_list = ["🌐 Barter Feed", "⚡ Smart Matches", "➕ Create Post", "📋 My Listings", "📬 Trade Proposals", "📊 ROI Analytics", "🏢 Business Profile"]
+    if is_admin:
+        tabs_list.append("🛡️ Admin Panel")
+
+    tabs = st.tabs(tabs_list)
+    
+    tab_feed = tabs[0]
+    tab_match = tabs[1]
+    tab_create = tabs[2]
+    tab_my_listings = tabs[3]
+    tab_proposals = tabs[4]
+    tab_analytics = tabs[5]
+    tab_profile = tabs[6]
 
     my_posts_res = supabase.table("posts").select("*").eq("user_id", user.id).execute()
     my_active_posts = my_posts_res.data or []
@@ -699,6 +788,7 @@ def main_app():
                     contact = profile.get("contact_email", user.email)
                     location = profile.get("location", "Montreal, QC")
                     logo = profile.get("logo_url")
+                    v_badge = " ✅" if profile.get("is_verified") else ""
                     
                     p_type = post.get("type") or post.get("post_type") or "Offer"
                     badge = "🟢 OFFER" if p_type == "Offer" else "🔵 NEED"
@@ -708,7 +798,7 @@ def main_app():
                         col_header_left, col_header_right = st.columns([3, 1])
                         with col_header_left:
                             st.markdown(f"### {badge}: {post['title']}")
-                            st.caption(f"🏢 **{biz_name}** | 📍 {location} | 🏷️ **Category:** {post.get('category', 'General')}")
+                            st.caption(f"🏢 **{biz_name}**{v_badge} | 📍 {location} | 🏷️ **Category:** {post.get('category', 'General')}")
                         with col_header_right:
                             if logo:
                                 st.image(logo, width=80)
@@ -795,9 +885,14 @@ def main_app():
     with tab_profile:
         render_business_profile(user.id)
 
+    # --- TAB 8: ADMIN PANEL (IF APPLICABLE) ---
+    if is_admin:
+        with tabs[7]:
+            render_admin_panel()
+
 
 # -----------------------------------------------------------------------------
-# 9. ENTRY POINT
+# 10. ENTRY POINT
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
     if not st.session_state.user:
