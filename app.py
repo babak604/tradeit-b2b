@@ -4,18 +4,19 @@ import streamlit as st
 from supabase import create_client
 
 # -----------------------------------------------------------------------------
-# 1. CONFIGURATION & CREDENTIALS
+# 1. PAGE CONFIGURATION & CREDENTIALS
 # -----------------------------------------------------------------------------
-HARDCODED_SUPABASE_URL = "https://udwmxzbpmkhimzctoemg.supabase.co"
-HARDCODED_SUPABASE_KEY = ""  # <--- PASTE YOUR ANON KEY HERE IF NEEDED
-
 st.set_page_config(
     page_title="TradeIt - B2B Barter Marketplace",
     page_icon="🤝",
     layout="wide"
 )
 
-# Load variables from .env.local if python-dotenv is installed
+# Hardcoded fallback URL (Keep key empty so GitHub Secret Scanner does not block pushes)
+HARDCODED_SUPABASE_URL = "https://udwmxzbpmkhimzctoemg.supabase.co"
+HARDCODED_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkd214emJwbWtoaW16Y3RvZW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNzM3OTcsImV4cCI6MjEwMDc0OTc5N30.P-Gca7vdp6XT0S3WX7xXqpun295Ykf9CsjoUo5-8Y2U"
+
+# Load variables from .env.local if python-dotenv is available locally
 try:
     from dotenv import load_dotenv
     load_dotenv(".env.local")
@@ -23,28 +24,24 @@ try:
 except ImportError:
     pass
 
-# Retrieve Supabase credentials safely
-SUPABASE_URL = (
-    os.getenv("SUPABASE_URL")
-    or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
-    or (st.secrets.get("SUPABASE_URL") if hasattr(st, "secrets") else None)
-    or (st.secrets.get("NEXT_PUBLIC_SUPABASE_URL") if hasattr(st, "secrets") else None)
-    or HARDCODED_SUPABASE_URL
-)
+# Helper to safely retrieve secrets from Streamlit or Environment
+def fetch_secret(key_name):
+    try:
+        if hasattr(st, "secrets") and key_name in st.secrets:
+            return st.secrets[key_name]
+    except Exception:
+        pass
+    return os.getenv(key_name)
 
-SUPABASE_KEY = (
-    os.getenv("SUPABASE_KEY")
-    or os.getenv("SUPABASE_ANON_KEY")
-    or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
-    or (st.secrets.get("SUPABASE_KEY") if hasattr(st, "secrets") else None)
-    or (st.secrets.get("SUPABASE_ANON_KEY") if hasattr(st, "secrets") else None)
-    or (st.secrets.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") if hasattr(st, "secrets") else None)
-    or HARDCODED_SUPABASE_KEY
-)
+SUPABASE_URL = fetch_secret("SUPABASE_URL") or HARDCODED_SUPABASE_URL
+SUPABASE_KEY = fetch_secret("SUPABASE_KEY") or fetch_secret("SUPABASE_ANON_KEY") or HARDCODED_SUPABASE_KEY
 
 if not SUPABASE_KEY:
     st.error("⚠️ **Supabase Anon Key missing!**")
-    st.info("Please paste your anon key directly into line 9 of `app.py` or set `SUPABASE_KEY` in `.env.local`.")
+    st.info(
+        "Please add `SUPABASE_KEY` to your Streamlit Cloud **Secrets** (under Settings) "
+        "or set it in your local `.env.local` file."
+    )
     st.stop()
 
 @st.cache_resource
@@ -181,61 +178,62 @@ def render_my_listings(user_id):
                 if post.get("image_url"):
                     render_media(post["image_url"], width=250)
 
-            with col_actions:
-                st.write("**Actions**")
-                
-                with st.popover("✏️ Edit"):
-                    st.markdown(f"**Edit Post:** {post['title']}")
-                    with st.form(key=f"edit_form_{post['id']}"):
-                        edit_title = st.text_input("Title", value=post["title"])
-                        edit_type = st.selectbox(
-                            "Type", 
-                            ["Offer", "Need"], 
-                            index=0 if p_type == "Offer" else 1
-                        )
-                        edit_category = st.text_input("Category", value=post.get("category", "General"))
-                        edit_desc = st.text_area("Description", value=post.get("description", ""))
-                        
-                        st.caption("Upload new media to replace existing:")
-                        new_uploaded_file = st.file_uploader(
-                            "Replace Media File", 
-                            type=["png", "jpg", "jpeg", "webp", "mp4", "mov", "webm"],
-                            key=f"file_edit_{post['id']}"
-                        )
-                        edit_image_url = st.text_input("Or Media URL", value=post.get("image_url") or "", key=f"url_edit_{post['id']}")
-                        
-                        save_btn = st.form_submit_button("Save Changes", type="primary")
-                        if save_btn:
-                            try:
-                                final_media_url = post.get("image_url")
-                                
-                                if new_uploaded_file:
-                                    final_media_url = upload_file_to_supabase(new_uploaded_file, user_id)
-                                elif edit_image_url:
-                                    final_media_url = edit_image_url
-                                
-                                supabase.table("posts").update({
-                                    "title": edit_title,
-                                    "type": edit_type,
-                                    "post_type": edit_type,
-                                    "category": edit_category,
-                                    "description": edit_desc,
-                                    "image_url": final_media_url
-                                }).eq("id", post["id"]).execute()
-                                
-                                st.toast("Post updated successfully!", icon="✅")
-                                st.rerun()
-                            except Exception as err:
-                                st.error(f"Failed to update post: {err}")
+        # --- ENHANCED ACCEPTED TRADE VIEW WITH BARTER AGREEMENT ---
+if status == "accepted":
+    st.success("🎉 **Trade Agreement Active!** Contact details unlocked below.")
+    
+    # Partner Information Card
+    with st.expander("📄 View Formal Barter Summary & Contact Details", expanded=True):
+        st.markdown(f"### 🤝 Trade Agreement #{prop['id'][:8].upper()}")
+        st.caption(f"**Date Executed:** {prop['created_at'][:10]}")
+        
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            st.markdown("#### Party A (Proposer)")
+            st.write(f"**Company:** {proposer.get('business_name', 'N/A')}")
+            st.write(f"**Email:** {proposer.get('contact_email', 'N/A')}")
+            st.write(f"**Offered Scope:** {offered.get('title', 'N/A')}")
+            
+        with col_p2:
+            st.markdown("#### Party B (Recipient - You)")
+            st.write(f"**Company:** Your Business")
+            st.write(f"**Agreed Scope:** {target.get('title', 'N/A')}")
+            
+        st.divider()
+        st.markdown("**Notes / Special Terms:**")
+        st.write(prop.get("message") or "*No custom notes attached.*")
+        
+        # Downloadable Agreement Summary
+        agreement_text = f"""====================================================================
+TRADEIT B2B BARTER AGREEMENT SUMMARY
+Agreement Reference: {prop['id']}
+Date: {prop['created_at'][:10]}
+====================================================================
 
-                if st.button("🗑️ Delete", key=f"del_{post['id']}", type="secondary"):
-                    try:
-                        supabase.table("posts").delete().eq("id", post["id"]).execute()
-                        st.toast("Post deleted!", icon="🗑️")
-                        st.rerun()
-                    except Exception as err:
-                        st.error(f"Failed to delete post: {err}")
+PARTY A (PROPOSER):
+Business: {proposer.get('business_name')}
+Email: {proposer.get('contact_email')}
+Provided Item/Service: {offered.get('title')}
+Description: {offered.get('description')}
 
+PARTY B (RECIPIENT):
+Provided Item/Service: {target.get('title')}
+Description: {target.get('description')}
+
+TERMS & CONDITIONS:
+This digital agreement confirms a mutual B2B barter swap between the above parties.
+Both parties agree to deliver their respective services in good faith as specified.
+
+Generated automatically via TradeIt B2B Marketplace.
+===================================================================="""
+        
+        st.download_button(
+            label="📥 Download Agreement Receipt (.txt)",
+            data=agreement_text,
+            file_name=f"TradeIt_Agreement_{prop['id'][:8]}.txt",
+            mime="text/plain",
+            key=f"dl_agreed_{prop['id']}"
+        )
 
 # -----------------------------------------------------------------------------
 # 5. TRADE PROPOSALS COMPONENT
