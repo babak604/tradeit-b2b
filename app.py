@@ -1,5 +1,7 @@
 import os
 import uuid
+import json
+import urllib.request
 import pandas as pd
 import streamlit as st
 from supabase import create_client
@@ -50,7 +52,7 @@ if "user" not in st.session_state:
 
 
 # -----------------------------------------------------------------------------
-# 2. HELPER FUNCTIONS FOR STORAGE, MEDIA, CHAT & NOTIFICATIONS
+# 2. HELPER FUNCTIONS FOR STORAGE, MEDIA, WEBHOOKS & CHAT
 # -----------------------------------------------------------------------------
 def upload_file_to_supabase(uploaded_file, user_id, folder="media"):
     try:
@@ -77,6 +79,22 @@ def render_media(url, width=350):
     else:
         st.image(url, width=width)
 
+def trigger_webhook(user_id, event_type, payload):
+    """Dispatches a JSON webhook payload to the user's configured endpoint if present."""
+    try:
+        prof_res = supabase.table("profiles").select("webhook_url").eq("id", user_id).execute()
+        if prof_res.data and prof_res.data[0].get("webhook_url"):
+            webhook_url = prof_res.data[0]["webhook_url"]
+            full_payload = {"event": event_type, "data": payload}
+            req = urllib.request.Request(
+                webhook_url,
+                data=json.dumps(full_payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'}
+            )
+            urllib.request.urlopen(req, timeout=2)
+    except Exception:
+        pass
+
 def send_notification(user_id, title, message):
     try:
         supabase.table("notifications").insert({
@@ -84,6 +102,8 @@ def send_notification(user_id, title, message):
             "title": title,
             "message": message
         }).execute()
+        
+        trigger_webhook(user_id, "notification_received", {"title": title, "message": message})
     except Exception:
         pass
 
@@ -736,28 +756,16 @@ def render_trade_proposals(user_id):
                                 st.markdown(f"### 🤝 Trade Agreement #{prop['id'][:8].upper()}")
                                 st.caption(f"**Date Executed:** {prop['created_at'][:10]}")
                                 
-                                col_p1, col_p2 = st.columns(2)
-                                with col_p1:
-                                    st.markdown("#### Party A (Proposer)")
-                                    st.write(f"**Company:** {proposer.get('business_name', 'N/A')}")
-                                    st.write(f"**Email:** {proposer.get('contact_email', 'N/A')}")
-                                    st.write(f"**Offered Scope:** {offered.get('title', 'N/A')}")
-                                    
-                                with col_p2:
-                                    st.markdown("#### Party B (Recipient - You)")
-                                    st.write(f"**Company:** Your Business")
-                                    st.write(f"**Agreed Scope:** {target.get('title', 'N/A')}")
-                                    
-                                agreement_text = f"""====================================================================
-TRADEIT B2B BARTER AGREEMENT SUMMARY
-Agreement Reference: {prop['id']}
-Date: {prop['created_at'][:10]}
-====================================================================
-PARTY A: {proposer.get('business_name')} ({proposer.get('contact_email')})
-PARTY B: Recipient Business
-CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
-===================================================================="""
-                                st.download_button("📥 Download Contract (.txt)", agreement_text, file_name=f"TradeIt_Agreement_{prop['id'][:8]}.txt", key=f"dl_agreed_{prop['id']}")
+                                html_contract = f"""<!DOCTYPE html>
+<html>
+<head><style>body{{font-family:sans-serif;padding:20px;color:#333;}} .header{{border-bottom:2px solid #2563EB;padding-bottom:10px;}} .section{{margin-top:20px;}}</style></head>
+<body>
+<div class="header"><h1>TRADEIT B2B BARTER CONTRACT</h1><p>Ref: {prop['id']} | Date: {prop['created_at'][:10]}</p></div>
+<div class="section"><h3>PARTY A: {proposer.get('business_name')}</h3><p>Provided: {offered.get('title')}</p></div>
+<div class="section"><h3>PARTY B: Recipient Business</h3><p>Provided: {target.get('title')}</p></div>
+<div class="section"><p><strong>Cash Adjustment:</strong> ${cash_topup:,.2f} CAD</p></div>
+</body></html>"""
+                                st.download_button("📥 Download Formal Contract (.HTML)", html_contract, file_name=f"TradeIt_Contract_{prop['id'][:8]}.html", mime="text/html", key=f"dl_agreed_{prop['id']}")
                             
                             st.divider()
                             render_milestones_tracker(prop, user_id)
@@ -873,6 +881,7 @@ def render_business_profile(user_id):
             edit_contact_email = st.text_input("Contact Email", value=profile_data.get("contact_email") or "")
             edit_location = st.text_input("Location", value=profile_data.get("location") or "Montreal, QC")
             edit_website = st.text_input("Website URL", value=profile_data.get("website") or "")
+            edit_webhook = st.text_input("Zapier / Make Webhook Endpoint (Optional)", value=profile_data.get("webhook_url") or "", placeholder="https://hooks.zapier.com/hooks/catch/...")
             edit_bio = st.text_area("Business Bio", value=profile_data.get("bio") or "")
             uploaded_logo = st.file_uploader("Select Logo Image", type=["png", "jpg", "jpeg", "webp"])
             
@@ -889,6 +898,7 @@ def render_business_profile(user_id):
                         "contact_email": edit_contact_email,
                         "location": edit_location,
                         "website": edit_website,
+                        "webhook_url": edit_webhook,
                         "bio": edit_bio,
                         "logo_url": final_logo_url
                     }).execute()
