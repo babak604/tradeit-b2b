@@ -601,11 +601,30 @@ def render_business_profile(user_id):
             st.toast("Profile updated!", icon="🎉")
             st.rerun()
 
+
+# -----------------------------------------------------------------------------
+# 12. MAIN APPLICATION DASHBOARD (WITH SAFETY BLOCKS)
+# -----------------------------------------------------------------------------
 def main_app():
     user = st.session_state.user
-    unread_count = len(supabase.table("notifications").select("id").eq("user_id", user.id).eq("is_read", False).execute().data or [])
-    my_prof_res = supabase.table("profiles").select("is_admin").eq("id", user.id).execute()
-    is_admin = my_prof_res.data[0].get("is_admin", False) if my_prof_res.data else False
+    
+    # Safely fetch unread notifications count
+    unread_count = 0
+    try:
+        notif_res = supabase.table("notifications").select("id").eq("user_id", user.id).eq("is_read", False).execute()
+        if notif_res.data:
+            unread_count = len(notif_res.data)
+    except Exception:
+        pass
+
+    # Safely fetch admin status
+    is_admin = False
+    try:
+        my_prof_res = supabase.table("profiles").select("is_admin").eq("id", user.id).execute()
+        if my_prof_res.data:
+            is_admin = my_prof_res.data[0].get("is_admin", False)
+    except Exception:
+        pass
 
     with st.sidebar:
         st.title("🤝 TradeIt B2B")
@@ -617,28 +636,36 @@ def main_app():
             st.rerun()
 
     tabs = st.tabs(["🌐 Barter Feed", "⚡ Smart Matches", "🗺️ Barter Map", "➕ Create Post", "📋 My Listings", f"📬 Trade Proposals ({unread_count})", "📊 ROI Analytics", "🏢 Profile"] + (["🛡️ Admin"] if is_admin else []))
-    my_active_posts = supabase.table("posts").select("*").eq("user_id", user.id).execute().data or []
+    
+    my_active_posts = []
+    try:
+        my_active_posts = supabase.table("posts").select("*").eq("user_id", user.id).execute().data or []
+    except Exception:
+        pass
 
     with tabs[0]:
         st.subheader("Browse Barter Opportunities")
-        all_posts = supabase.table("posts").select("*, profiles(*)").order("created_at", desc=True).execute().data or []
-        for post in all_posts:
-            with st.container(border=True):
-                st.markdown(f"### {post['title']}")
-                st.caption(f"🏢 **{(post.get('profiles') or {}).get('business_name', 'Business')}**")
-                st.write(post.get("description", ""))
-                if post["user_id"] != user.id:
-                    with st.popover("🤝 Propose Trade"):
-                        if not my_active_posts: st.warning("Create a post first!")
-                        else:
-                            with st.form(key=f"prop_form_{post['id']}"):
-                                post_options = {p['title']: p["id"] for p in my_active_posts}
-                                selected_label = st.selectbox("Select item to offer:", list(post_options.keys()))
-                                submit_prop = st.form_submit_button("Send Proposal", type="primary")
-                                if submit_prop:
-                                    supabase.table("trade_proposals").insert({"proposer_id": user.id, "recipient_id": post["user_id"], "target_post_id": post["id"], "offered_post_id": post_options[selected_label]}).execute()
-                                    st.toast("Proposal sent!", icon="🚀")
-                                    st.rerun()
+        try:
+            all_posts = supabase.table("posts").select("*, profiles(*)").order("created_at", desc=True).execute().data or []
+            for post in all_posts:
+                with st.container(border=True):
+                    st.markdown(f"### {post['title']}")
+                    st.caption(f"🏢 **{(post.get('profiles') or {}).get('business_name', 'Business')}**")
+                    st.write(post.get("description", ""))
+                    if post["user_id"] != user.id:
+                        with st.popover("🤝 Propose Trade"):
+                            if not my_active_posts: st.warning("Create a post first!")
+                            else:
+                                with st.form(key=f"prop_form_{post['id']}"):
+                                    post_options = {p['title']: p["id"] for p in my_active_posts}
+                                    selected_label = st.selectbox("Select item to offer:", list(post_options.keys()))
+                                    submit_prop = st.form_submit_button("Send Proposal", type="primary")
+                                    if submit_prop:
+                                        supabase.table("trade_proposals").insert({"proposer_id": user.id, "recipient_id": post["user_id"], "target_post_id": post["id"], "offered_post_id": post_options[selected_label]}).execute()
+                                        st.toast("Proposal sent!", icon="🚀")
+                                        st.rerun()
+        except Exception as e:
+            st.error("Error loading feed.")
 
     with tabs[1]: render_smart_matches(user.id, my_active_posts)
     with tabs[2]: render_barter_map()
