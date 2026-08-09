@@ -186,7 +186,6 @@ def render_milestones_tracker(prop, user_id):
         else:
             st.info("No deliverable milestones added yet.")
 
-        # Add New Milestone Form
         with st.popover("➕ Add Milestone", use_container_width=False):
             with st.form(key=f"add_ms_form_{proposal_id}"):
                 ms_title = st.text_input("Milestone Title", placeholder="e.g. Initial Wireframe Approval")
@@ -204,7 +203,51 @@ def render_milestones_tracker(prop, user_id):
 
 
 # -----------------------------------------------------------------------------
-# 4. NOTIFICATION FEED COMPONENT
+# 4. GEOGRAPHIC MAP DISCOVERY MODULE
+# -----------------------------------------------------------------------------
+def render_barter_map():
+    st.subheader("🗺️ Geographic Barter Discovery Map")
+    st.caption("Locate local business offers and needs geographically in your region.")
+
+    try:
+        posts_query = supabase.table("posts").select("*, profiles(*)").execute()
+        posts = posts_query.data or []
+
+        map_data = []
+        for p in posts:
+            prof = p.get("profiles") or {}
+            lat = float(prof.get("latitude") or 45.5017)
+            lon = float(prof.get("longitude") or -73.5673)
+            p_type = p.get("type") or p.get("post_type") or "Offer"
+
+            map_data.append({
+                "lat": lat,
+                "lon": lon,
+                "title": p["title"],
+                "business_name": prof.get("business_name", "Business"),
+                "category": p.get("category", "General"),
+                "type": p_type
+            })
+
+        if map_data:
+            df_map = pd.DataFrame(map_data)
+            st.map(df_map, latitude="lat", longitude="lon", zoom=10, size=20)
+            
+            st.divider()
+            st.markdown("### 📍 Local Member Map Directory")
+            st.dataframe(
+                df_map[["business_name", "title", "type", "category"]],
+                use_container_width=True
+            )
+        else:
+            st.info("No mapped listings available yet.")
+
+    except Exception as e:
+        st.error(f"Error rendering barter map: {e}")
+
+
+# -----------------------------------------------------------------------------
+# 5. NOTIFICATION FEED COMPONENT
 # -----------------------------------------------------------------------------
 def render_notifications_feed(user_id):
     st.subheader("🔔 Activity & System Notifications")
@@ -236,7 +279,7 @@ def render_notifications_feed(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 5. SMART MATCHMAKING & ANALYTICS MODULES
+# 6. SMART MATCHMAKING & ANALYTICS MODULES
 # -----------------------------------------------------------------------------
 def render_smart_matches(user_id, my_posts):
     st.subheader("⚡ Automated Barter Matchmaker")
@@ -398,7 +441,7 @@ def render_analytics_dashboard(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 6. ADMIN & MODERATION PANEL
+# 7. ADMIN & MODERATION PANEL
 # -----------------------------------------------------------------------------
 def render_admin_panel():
     st.subheader("🛡️ Platform Admin & Moderation Operations")
@@ -457,7 +500,7 @@ def render_admin_panel():
 
 
 # -----------------------------------------------------------------------------
-# 7. AUTHENTICATION MODULE
+# 8. AUTHENTICATION MODULE
 # -----------------------------------------------------------------------------
 def render_auth_page():
     st.title("🤝 Welcome to TradeIt")
@@ -512,7 +555,7 @@ def render_auth_page():
 
 
 # -----------------------------------------------------------------------------
-# 8. MY LISTINGS COMPONENT
+# 9. MY LISTINGS COMPONENT
 # -----------------------------------------------------------------------------
 def render_my_listings(user_id):
     st.subheader("📋 My Active Listings")
@@ -599,7 +642,7 @@ def render_my_listings(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 9. TRADE PROPOSALS COMPONENT
+# 10. TRADE PROPOSALS COMPONENT
 # -----------------------------------------------------------------------------
 def render_trade_proposals(user_id):
     st.subheader("📬 Trade Proposals Inbox")
@@ -717,10 +760,8 @@ CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
                                 st.download_button("📥 Download Contract (.txt)", agreement_text, file_name=f"TradeIt_Agreement_{prop['id'][:8]}.txt", key=f"dl_agreed_{prop['id']}")
                             
                             st.divider()
-                            # Deliverable Milestones Section
                             render_milestones_tracker(prop, user_id)
                             st.divider()
-                            # Chat Section
                             render_chat_window(prop["id"], user_id, prop["proposer_id"])
                                     
         except Exception as e:
@@ -779,10 +820,8 @@ CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
                             st.success("🎉 **Trade Accepted by Partner!** Contact email, chat & milestones unlocked below.")
                             st.write(f"📧 **Partner Email:** {recipient.get('contact_email', 'N/A')}")
                             st.divider()
-                            # Deliverable Milestones Section
                             render_milestones_tracker(prop, user_id)
                             st.divider()
-                            # Chat Section
                             render_chat_window(prop["id"], user_id, prop["recipient_id"])
                                 
         except Exception as e:
@@ -790,7 +829,7 @@ CASH TOP-UP ADJUSTMENT: ${cash_topup:,.2f} CAD
 
 
 # -----------------------------------------------------------------------------
-# 10. BUSINESS PROFILE MODULE
+# 11. BUSINESS PROFILE MODULE
 # -----------------------------------------------------------------------------
 def render_business_profile(user_id):
     st.subheader("🏢 Business Profile & Brand Showcase")
@@ -861,7 +900,7 @@ def render_business_profile(user_id):
 
 
 # -----------------------------------------------------------------------------
-# 11. MAIN APPLICATION DASHBOARD
+# 12. MAIN APPLICATION DASHBOARD
 # -----------------------------------------------------------------------------
 def main_app():
     user = st.session_state.user
@@ -896,7 +935,7 @@ def main_app():
             st.rerun()
 
     notif_label = f"🔔 Notifications ({unread_count})" if unread_count > 0 else "🔔 Notifications"
-    tabs_list = ["🌐 Barter Feed", "⚡ Smart Matches", "➕ Create Post", "📋 My Listings", "📬 Trade Proposals", notif_label, "📊 ROI Analytics", "🏢 Business Profile"]
+    tabs_list = ["🌐 Barter Feed", "⚡ Smart Matches", "🗺️ Barter Map", "➕ Create Post", "📋 My Listings", "📬 Trade Proposals", notif_label, "📊 ROI Analytics", "🏢 Business Profile"]
     if is_admin:
         tabs_list.append("🛡️ Admin Panel")
 
@@ -904,12 +943,13 @@ def main_app():
     
     tab_feed = tabs[0]
     tab_match = tabs[1]
-    tab_create = tabs[2]
-    tab_my_listings = tabs[3]
-    tab_proposals = tabs[4]
-    tab_notifs = tabs[5]
-    tab_analytics = tabs[6]
-    tab_profile = tabs[7]
+    tab_map = tabs[2]
+    tab_create = tabs[3]
+    tab_my_listings = tabs[4]
+    tab_proposals = tabs[5]
+    tab_notifs = tabs[6]
+    tab_analytics = tabs[7]
+    tab_profile = tabs[8]
 
     my_posts_res = supabase.table("posts").select("*").eq("user_id", user.id).execute()
     my_active_posts = my_posts_res.data or []
@@ -1034,7 +1074,11 @@ def main_app():
     with tab_match:
         render_smart_matches(user.id, my_active_posts)
 
-    # --- TAB 3: CREATE POST ---
+    # --- TAB 3: BARTER MAP ---
+    with tab_map:
+        render_barter_map()
+
+    # --- TAB 4: CREATE POST ---
     with tab_create:
         st.subheader("Post an Offer or Need")
         with st.form("create_post_form", clear_on_submit=True):
@@ -1060,34 +1104,34 @@ def main_app():
                 st.toast("Post published!", icon="🚀")
                 st.rerun()
 
-    # --- TAB 4: MY LISTINGS ---
+    # --- TAB 5: MY LISTINGS ---
     with tab_my_listings:
         render_my_listings(user.id)
 
-    # --- TAB 5: TRADE PROPOSALS ---
+    # --- TAB 6: TRADE PROPOSALS ---
     with tab_proposals:
         render_trade_proposals(user.id)
 
-    # --- TAB 6: NOTIFICATIONS ---
+    # --- TAB 7: NOTIFICATIONS ---
     with tab_notifs:
         render_notifications_feed(user.id)
 
-    # --- TAB 7: ROI ANALYTICS ---
+    # --- TAB 8: ROI ANALYTICS ---
     with tab_analytics:
         render_analytics_dashboard(user.id)
 
-    # --- TAB 8: BUSINESS PROFILE ---
+    # --- TAB 9: BUSINESS PROFILE ---
     with tab_profile:
         render_business_profile(user.id)
 
-    # --- TAB 9: ADMIN PANEL (IF APPLICABLE) ---
+    # --- TAB 10: ADMIN PANEL (IF APPLICABLE) ---
     if is_admin:
-        with tabs[8]:
+        with tabs[9]:
             render_admin_panel()
 
 
 # -----------------------------------------------------------------------------
-# 12. ENTRY POINT
+# 13. ENTRY POINT
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
     if not st.session_state.user:
