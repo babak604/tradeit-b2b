@@ -21,3 +21,8 @@ env/
 .DS_Store
 Thumbs.db
 node_modules
+
+.next/
+
+.vercel
+.env*
