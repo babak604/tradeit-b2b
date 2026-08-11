@@ -1,11 +1,41 @@
 {
   "version": 4,
-  "routes": {},
+  "routes": {
+    "/manifest.webmanifest": {
+      "initialHeaders": {
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "application/manifest+json",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/manifest.webmanifest/layout,_N_T_/manifest.webmanifest/route,_N_T_/manifest.webmanifest"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/manifest.webmanifest",
+      "dataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    }
+  },
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "11e8127092454a38b31cdcbf80aad52d",
-    "previewModeSigningKey": "be2697978aede8c817e63cf91c88c7326f2d8545a0a29299834fef99568112d6",
-    "previewModeEncryptionKey": "fce0b0c8d3238861f515155378eda1355f6cb5621afcfe425e15340355963718"
+    "previewModeId": "c3ae256aff0bc04b240d2d12f5d98b40",
+    "previewModeSigningKey": "48983e5fe8dee49d4c30e38a89dd867d67afa6bcbe7d0a65e98288e4f81d8a58",
+    "previewModeEncryptionKey": "8a124ccbf2a0350f8f95b76e2e69faa4e7e10734dc958656ca3ad0d5f56d670b"
   }
 }

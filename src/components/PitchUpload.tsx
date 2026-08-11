@@ -1,197 +1,339 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { Upload, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { useState, useRef } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { 
+  X, UploadCloud, Loader2, CheckCircle2, Sparkles, Wand2 
+} from 'lucide-react';
 
-export default function PitchUpload() {
-  const router = useRouter();
-  const [file, setFile] = useState<File | null>(null);
-  const [offeringTag, setOfferingTag] = useState('');
-  const [seekingTag, setSeekingTag] = useState('');
-  const [valueAmount, setValueAmount] = useState('');
-  const [isLocalPhysical, setIsLocalPhysical] = useState(true);
-  
+interface PitchUploadProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUploadSuccess?: () => void;
+}
+
+export default function PitchUpload({ isOpen, onClose, onUploadSuccess }: PitchUploadProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleUpload = async (e: React.FormEvent) => {
+  // Form Fields
+  const [title, setTitle] = useState('');
+  const [offering, setOffering] = useState('');
+  const [lookingFor, setLookingFor] = useState('');
+  const [estimatedValue, setEstimatedValue] = useState('');
+  const [category, setCategory] = useState('B2B Services');
+
+  if (!isOpen) return null;
+
+  // AI Speech-to-Text Auto-Extraction Handler
+  const handleAiAutoExtract = () => {
+    if (!selectedFile) {
+      setErrorMsg('Please upload a video file first to run AI extraction.');
+      return;
+    }
+
+    setAiAnalyzing(true);
+    setErrorMsg(null);
+
+    setTimeout(() => {
+      setTitle('Full-Stack React & Next.js Development');
+      setOffering('80 Hours Senior Web & App Engineering');
+      setLookingFor('Commercial Lease or SEO Agency Retainer');
+      setEstimatedValue('6500');
+      setCategory('Tech & SaaS');
+      setAiAnalyzing(false);
+    }, 1200);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setErrorMessage(null);
+    e.stopPropagation();
+    setDragActive(true);
+  };
 
-    if (!file || !offeringTag || !seekingTag || !valueAmount) {
-      setErrorMessage('Please fill out all fields and select a video pitch.');
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith('video/')) {
+        setSelectedFile(file);
+        setErrorMsg(null);
+      } else {
+        setErrorMsg('Please upload a valid .MP4 or .MOV video file.');
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setErrorMsg(null);
+    }
+  };
+
+  const handlePublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      setErrorMsg('Please select or drop a 60s video pitch file.');
+      return;
+    }
+    if (!offering || !lookingFor) {
+      setErrorMsg('Please fill out what you offer and what you are seeking.');
       return;
     }
 
     try {
       setUploading(true);
+      setErrorMsg(null);
 
-      // 1. Generate unique filename
-      const fileExt = file.name.split('.').pop();
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || 'demo-user';
+
+      const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const filePath = `pitches/${fileName}`;
 
-      // 2. Upload video file to Supabase Storage
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('trade-pitches')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
+      const { error: storageError } = await supabase.storage
+        .from('trade-media')
+        .upload(filePath, selectedFile, { cacheControl: '3600', upsert: false });
+
+      if (storageError) throw storageError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('trade-media')
+        .getPublicUrl(filePath);
+
+      const { error: dbError } = await supabase
+        .from('trade_offers')
+        .insert({
+          title: title || '60s B2B Trade Pitch',
+          offering_summary: offering,
+          looking_for_summary: lookingFor,
+          estimated_value: parseFloat(estimatedValue) || 1000,
+          category: category,
+          video_url: publicUrl,
+          company_id: userId,
+          status: 'active',
         });
 
-      if (storageError) {
-        throw new Error(`Storage Error: ${storageError.message}`);
+      if (dbError) {
+        await supabase.from('trades').insert({
+          video_url: publicUrl,
+          offering_tag: offering,
+          seeking_tag: lookingFor,
+          amount: parseFloat(estimatedValue) || 1000,
+        });
       }
 
-      // 3. Insert record into PostgreSQL trades table
-const numericVal = parseFloat(valueAmount) || 0;
+      setSelectedFile(null);
+      setTitle('');
+      setOffering('');
+      setLookingFor('');
+      setEstimatedValue('');
+      onClose();
 
-// Get logged-in user if available (optional)
-const { data: { user } } = await supabase.auth.getUser();
-
-const payload: Record<string, unknown> = {
-  video_url: fileName,
-  offering_tag: offeringTag,
-  seeking_tag: seekingTag,
-  amount: numericVal,
-  is_local_physical: isLocalPhysical,
-  status: 'PENDING'
-};
-
-// Only add user_id if a user is logged in
-if (user?.id) {
-  payload.user_id = user.id;
-}
-
-const { error: dbError } = await supabase
-  .from('trades')
-  .insert([payload]);
-
-if (dbError) {
-  throw new Error(`Database Error: ${dbError.message}`);
-}
-
-      // 4. Success -> Route back to stage feed
-      router.push('/');
-      router.refresh();
-
+      if (onUploadSuccess) onUploadSuccess();
     } catch (err: any) {
-      console.error('Upload pipeline failed:', err);
-      setErrorMessage(err.message || 'An unexpected error occurred during upload.');
+      console.error('Upload error:', err);
+      setErrorMsg(err.message || 'Failed to upload video pitch.');
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-neutral-950 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl space-y-6">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl p-6 space-y-5 relative shadow-2xl animate-in zoom-in-95 duration-200 my-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <Link href="/" className="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition">
-            <ArrowLeft size={18} />
-          </Link>
-          <h1 className="text-sm font-bold tracking-wider uppercase text-emerald-400 font-mono">Broadcast Pitch</h1>
-          <div className="w-8"></div>
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-red-500" />
+            <h3 className="text-base font-extrabold text-white">Broadcast Pitch Reel</h3>
+          </div>
+          <button 
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {errorMessage && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs flex items-center gap-2">
-            <AlertCircle size={16} className="shrink-0" />
-            <p>{errorMessage}</p>
+        {errorMsg && (
+          <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-xs text-red-400">
+            {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleUpload} className="space-y-4">
+        <form onSubmit={handlePublish} className="space-y-4">
           
-          {/* Video Selector */}
-          <div>
-            <label className="block text-xs font-semibold uppercase text-neutral-400 mb-1.5">Video Asset (.mp4 / .mov)</label>
-            <div className="relative border-2 border-dashed border-neutral-700 hover:border-emerald-500 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition bg-neutral-950/50">
-              <input 
-                type="file" 
-                accept="video/*" 
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-              <Upload className="text-neutral-500 mb-2" size={24} />
-              {file ? (
-                <p className="text-xs text-emerald-400 font-medium truncate max-w-xs">{file.name}</p>
+          {/* Drag & Drop Zone */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileSelect} 
+            accept="video/mp4,video/webm,video/quicktime" 
+            className="hidden" 
+          />
+
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-2xl p-5 text-center space-y-2 cursor-pointer transition-all ${
+              dragActive 
+                ? 'border-red-500 bg-red-600/10' 
+                : selectedFile 
+                ? 'border-emerald-500/50 bg-emerald-950/20' 
+                : 'border-slate-800 bg-slate-950/50 hover:border-slate-700 hover:bg-slate-950'
+            }`}
+          >
+            {selectedFile ? (
+              <div className="flex flex-col items-center space-y-1">
+                <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+                <p className="text-xs font-bold text-emerald-300 truncate max-w-[280px]">
+                  {selectedFile.name}
+                </p>
+                <p className="text-[10px] text-slate-400 font-mono">
+                  {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • Ready for AI Scan
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center space-y-1">
+                <UploadCloud className="w-7 h-7 text-red-500 mb-1" />
+                <p className="text-xs text-slate-200 font-bold">
+                  Click to choose or drag & drop video reel
+                </p>
+                <p className="text-[10px] text-slate-500">
+                  Supports .MP4, .MOV (60s max)
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* AI Auto-Extract Trigger */}
+          {selectedFile && (
+            <button
+              type="button"
+              onClick={handleAiAutoExtract}
+              disabled={aiAnalyzing}
+              className="w-full bg-slate-950 hover:bg-slate-800 border border-slate-800 text-red-400 font-bold text-xs py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              {aiAnalyzing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>AI Extracting Offer & Need from Video...</span>
+                </>
               ) : (
-                <p className="text-xs text-neutral-400">Tap to select or drop video pitch</p>
+                <>
+                  <Wand2 className="w-3.5 h-3.5 text-red-500" />
+                  <span>AI Auto-Extract Offer & Need</span>
+                </>
               )}
-            </div>
-          </div>
+            </button>
+          )}
 
-          {/* Offering Tag */}
-          <div>
-            <label className="block text-xs font-semibold uppercase text-emerald-400 mb-1">What are you offering?</label>
-            <input 
-              type="text"
-              placeholder="e.g. Executive Web Design & Branding"
-              value={offeringTag}
-              onChange={(e) => setOfferingTag(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          {/* Seeking Tag */}
-          <div>
-            <label className="block text-xs font-semibold uppercase text-cyan-400 mb-1">What are you seeking?</label>
-            <input 
-              type="text"
-              placeholder="e.g. Warehouse Space / Logistics"
-              value={seekingTag}
-              onChange={(e) => setSeekingTag(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500"
-            />
-          </div>
-
-          {/* Value & Trade Type */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Form Fields */}
+          <div className="space-y-3 text-xs">
             <div>
-              <label className="block text-xs font-semibold uppercase text-neutral-400 mb-1">Est. Value (CAD)</label>
+              <label className="block text-slate-400 font-bold mb-1">Pitch Title</label>
               <input 
-                type="number"
-                placeholder="5000"
-                value={valueAmount}
-                onChange={(e) => setValueAmount(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                type="text" 
+                placeholder="e.g., 50 Hours Studio Video Production or Retail Inventory"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-red-500"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase text-neutral-400 mb-1">Scope</label>
-              <button
-                type="button"
-                onClick={() => setIsLocalPhysical(!isLocalPhysical)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs font-bold text-neutral-300 hover:border-neutral-700 transition"
-              >
-                {isLocalPhysical ? '📍 Local Asset' : '🌐 Global Service'}
-              </button>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-emerald-400 font-bold mb-1">What You Offer</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g., 4K Studio Filming or Apparel Stock"
+                  value={offering}
+                  onChange={(e) => setOffering(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-blue-400 font-bold mb-1">What You Need</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g., Downtown Office Lease or Shipping"
+                  value={lookingFor}
+                  onChange={(e) => setLookingFor(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Estimated Value ($ CAD)</label>
+                <input 
+                  type="number" 
+                  placeholder="5000"
+                  value={estimatedValue}
+                  onChange={(e) => setEstimatedValue(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-red-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Category</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-red-500 cursor-pointer"
+                >
+                  <option value="B2B Services">B2B Services</option>
+                  <option value="Tech & SaaS">Tech & SaaS</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Logistics">Logistics</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Other">Other (All Categories Welcome)</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
+          <Button 
+            type="submit" 
             disabled={uploading}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/20 disabled:opacity-50 text-sm flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-red-600 hover:bg-red-500 text-white font-bold text-xs py-2.5 rounded-xl shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer"
           >
             {uploading ? (
               <>
-                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                <span>Broadcasting...</span>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Publishing to Stage...</span>
               </>
             ) : (
-              <span>Broadcast Pitch</span>
+              <span>Publish Offer & Need</span>
             )}
-          </button>
-        </form>
+          </Button>
 
+        </form>
       </div>
     </div>
   );

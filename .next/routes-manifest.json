@@ -1,1 +1,258 @@
-{"version":3,"caseSensitive":false,"basePath":"","rewrites":{"beforeFiles":[],"afterFiles":[],"fallback":[]},"redirects":[{"source":"/:path+/","destination":"/:path+","permanent":true,"internal":true,"regex":"^(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))\\/$"}],"headers":[]}
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/deals/[id]",
+      "regex": "^/api/deals/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/deals/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/deals/[id]/contract",
+      "regex": "^/api/deals/([^/]+?)/contract(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/deals/(?<nxtPid>[^/]+?)/contract(?:/)?$"
+    },
+    {
+      "page": "/api/deals/[id]/messages",
+      "regex": "^/api/deals/([^/]+?)/messages(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/deals/(?<nxtPid>[^/]+?)/messages(?:/)?$"
+    },
+    {
+      "page": "/api/deals/[id]/pdf",
+      "regex": "^/api/deals/([^/]+?)/pdf(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/deals/(?<nxtPid>[^/]+?)/pdf(?:/)?$"
+    },
+    {
+      "page": "/api/deals/[id]/settle",
+      "regex": "^/api/deals/([^/]+?)/settle(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/deals/(?<nxtPid>[^/]+?)/settle(?:/)?$"
+    },
+    {
+      "page": "/api/deals/[id]/sign",
+      "regex": "^/api/deals/([^/]+?)/sign(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/deals/(?<nxtPid>[^/]+?)/sign(?:/)?$"
+    },
+    {
+      "page": "/dashboard/deals/[id]",
+      "regex": "^/dashboard/deals/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/dashboard/deals/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/deals/[id]",
+      "regex": "^/deals/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/deals/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/deals/[id]/dispute",
+      "regex": "^/deals/([^/]+?)/dispute(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/deals/(?<nxtPid>[^/]+?)/dispute(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin/disputes",
+      "regex": "^/admin/disputes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/disputes(?:/)?$"
+    },
+    {
+      "page": "/auth/callback",
+      "regex": "^/auth/callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/callback(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/dashboard/deals",
+      "regex": "^/dashboard/deals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/deals(?:/)?$"
+    },
+    {
+      "page": "/dashboard/financials",
+      "regex": "^/dashboard/financials(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/financials(?:/)?$"
+    },
+    {
+      "page": "/deals",
+      "regex": "^/deals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/deals(?:/)?$"
+    },
+    {
+      "page": "/deals/create",
+      "regex": "^/deals/create(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/deals/create(?:/)?$"
+    },
+    {
+      "page": "/deals/new",
+      "regex": "^/deals/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/deals/new(?:/)?$"
+    },
+    {
+      "page": "/disputes",
+      "regex": "^/disputes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/disputes(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/manifest.webmanifest",
+      "regex": "^/manifest\\.webmanifest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/manifest\\.webmanifest(?:/)?$"
+    },
+    {
+      "page": "/marketplace",
+      "regex": "^/marketplace(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/marketplace(?:/)?$"
+    },
+    {
+      "page": "/matchmaker",
+      "regex": "^/matchmaker(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/matchmaker(?:/)?$"
+    },
+    {
+      "page": "/offers",
+      "regex": "^/offers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/offers(?:/)?$"
+    },
+    {
+      "page": "/offers/create",
+      "regex": "^/offers/create(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/offers/create(?:/)?$"
+    },
+    {
+      "page": "/offers/new",
+      "regex": "^/offers/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/offers/new(?:/)?$"
+    },
+    {
+      "page": "/onboarding",
+      "regex": "^/onboarding(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/onboarding(?:/)?$"
+    },
+    {
+      "page": "/profile",
+      "regex": "^/profile(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/profile(?:/)?$"
+    },
+    {
+      "page": "/settings",
+      "regex": "^/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings(?:/)?$"
+    },
+    {
+      "page": "/treasury",
+      "regex": "^/treasury(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/treasury(?:/)?$"
+    },
+    {
+      "page": "/upload",
+      "regex": "^/upload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/upload(?:/)?$"
+    },
+    {
+      "page": "/wallet",
+      "regex": "^/wallet(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/wallet(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

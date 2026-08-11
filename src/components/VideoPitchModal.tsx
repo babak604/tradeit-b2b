@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import {
   X,
   Volume2,
@@ -36,9 +35,10 @@ export interface OfferItem {
 interface VideoPitchModalProps {
   offer: OfferItem | null;
   onClose: () => void;
+  onInitiateSwap?: (offer: OfferItem) => void;
 }
 
-export default function VideoPitchModal({ offer, onClose }: VideoPitchModalProps) {
+export default function VideoPitchModal({ offer, onClose, onInitiateSwap }: VideoPitchModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -91,6 +91,13 @@ export default function VideoPitchModal({ offer, onClose }: VideoPitchModalProps
     setProgress((current / duration) * 100);
   };
 
+  const handleSwapClick = () => {
+    if (onInitiateSwap) {
+      onInitiateSwap(offer);
+    }
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-200">
       
@@ -123,7 +130,7 @@ export default function VideoPitchModal({ offer, onClose }: VideoPitchModalProps
           {/* Video Scrub Progress Bar */}
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-800">
             <div
-              className="h-full bg-sky-500 transition-all duration-100"
+              className="h-full bg-red-500 transition-all duration-100"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -141,13 +148,13 @@ export default function VideoPitchModal({ offer, onClose }: VideoPitchModalProps
               onClick={toggleMute}
               className="p-2.5 bg-slate-950/80 backdrop-blur-md text-white rounded-xl border border-slate-800 hover:bg-slate-800 transition-all cursor-pointer"
             >
-              {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-sky-400" />}
+              {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
             </button>
           </div>
 
           {/* Category Overlay Tag */}
-          <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-bold text-sky-400">
-            <Tag className="w-3.5 h-3.5" />
+          <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-bold text-slate-200">
+            <Tag className="w-3.5 h-3.5 text-red-500" />
             {offer.category}
           </div>
         </div>
@@ -159,12 +166,12 @@ export default function VideoPitchModal({ offer, onClose }: VideoPitchModalProps
             {/* Company & Verification Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
-                <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-sky-400" />
+                <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-blue-400" />
                   {offer.company_name}
                 </span>
                 <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 font-mono">
-                  <MapPin className="w-3 h-3 text-sky-400" />
+                  <MapPin className="w-3 h-3 text-red-400" />
                   {offer.location_name}
                   {offer.distance_km !== undefined && offer.distance_km !== null && (
                     <span className="text-emerald-400 font-bold border-l border-slate-800 pl-2">
@@ -187,14 +194,14 @@ export default function VideoPitchModal({ offer, onClose }: VideoPitchModalProps
               <h2 className="text-xl font-black text-white tracking-tight">{offer.title}</h2>
               <div className="mt-2 inline-flex items-center gap-1 text-base font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-500/20">
                 <DollarSign className="w-4 h-4" />
-                {offer.estimated_value?.toLocaleString()} Estimated Value
+                {offer.estimated_value?.toLocaleString()} CAD Estimated Value
               </div>
             </div>
 
             {/* Pitch Specs */}
             <div className="space-y-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80">
               <div>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-400">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400">
                   Offering Provision
                 </span>
                 <p className="text-xs text-slate-200 mt-1 leading-relaxed">
@@ -203,7 +210,7 @@ export default function VideoPitchModal({ offer, onClose }: VideoPitchModalProps
               </div>
 
               <div className="pt-2 border-t border-slate-800/80">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-400">
                   Seeking Reciprocity
                 </span>
                 <p className="text-xs text-slate-200 mt-1 leading-relaxed">
@@ -215,12 +222,12 @@ export default function VideoPitchModal({ offer, onClose }: VideoPitchModalProps
 
           {/* Action Handshake CTA */}
           <div className="pt-4 border-t border-slate-800 space-y-3">
-            <Link
-              href={`/deals/new?offerId=${offer.id}`}
-              className="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-sky-500/20 cursor-pointer"
+            <button
+              onClick={handleSwapClick}
+              className="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-600/30 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" /> Initiate Barter Swap <ArrowRight className="w-4 h-4" />
-            </Link>
+            </button>
 
             <button
               onClick={onClose}
