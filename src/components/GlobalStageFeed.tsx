@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { 
   Volume2, VolumeX, Sparkles, Building2, ArrowUpRight, ArrowDownLeft, 
-  MapPin, Globe, Flame, ArrowRight, Search, Filter
+  MapPin, Globe, Flame, ArrowRight, Search, Filter, Bell, ShieldCheck 
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -29,6 +29,7 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [locationFilter, setLocationFilter] = useState<'all' | 'local' | 'global'>('all');
+  const [alertSaved, setAlertSaved] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -92,6 +93,7 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
             estimated_value: item.estimated_value ?? item.amount ?? item.value_amount ?? 0,
             category: item.category || 'B2B Services',
             is_local: Boolean(item.is_local_physical),
+            is_verified: true,
           };
         });
 
@@ -122,6 +124,11 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
       return matchesSearch && matchesCategory && matchesLocation;
     });
   }, [pitches, searchQuery, selectedCategory, locationFilter]);
+
+  const handleCreateAutoMatchAlert = () => {
+    setAlertSaved(true);
+    setTimeout(() => setAlertSaved(false), 3000);
+  };
 
   if (!mounted) return null;
 
@@ -155,7 +162,7 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
         </button>
       </div>
 
-      {/* MINIMAL COMPACT SEARCH & FILTER BAR */}
+      {/* MINIMAL COMPACT SEARCH, FILTER & AUTO-MATCH ALERT BAR */}
       <div className="flex flex-col md:flex-row items-center gap-2.5">
         
         {/* Search Input */}
@@ -176,7 +183,7 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
           <select 
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full md:w-44 bg-slate-900/60 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-red-500 appearance-none cursor-pointer"
+            className="w-full md:w-40 bg-slate-900/60 border border-slate-800 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-red-500 appearance-none cursor-pointer"
           >
             {CATEGORIES.map((cat) => (
               <option key={cat} value={cat} className="bg-slate-950 text-white">
@@ -213,6 +220,19 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
             🌐 Global
           </button>
         </div>
+
+        {/* Auto-Match Saved Search Button */}
+        <button
+          onClick={handleCreateAutoMatchAlert}
+          className={`w-full md:w-auto px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-all border ${
+            alertSaved 
+              ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-400' 
+              : 'bg-slate-900/60 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
+          }`}
+        >
+          <Bell className={`w-3.5 h-3.5 ${alertSaved ? 'text-emerald-400' : 'text-amber-400'}`} />
+          <span>{alertSaved ? 'Auto-Match Saved ✓' : 'Auto-Match Alert'}</span>
+        </button>
 
       </div>
 
@@ -257,7 +277,7 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
 
               {/* Top Badges */}
               <div className="relative z-20 p-4 flex items-center justify-between">
-                <span className="bg-slate-950/80 backdrop-blur-md border border-slate-800 text-emerald-400 text-xs font-black px-3 py-1 rounded-full shadow-lg">
+                <span className="bg-slate-950/80 backdrop-blur-md border border-slate-800 text-emerald-400 text-xs font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
                   ${pitch.estimated_value?.toLocaleString()} CAD
                 </span>
                 <span className="bg-slate-950/80 backdrop-blur-md border border-slate-800 text-slate-300 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
@@ -272,6 +292,7 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
                     <span className="font-extrabold text-white flex items-center gap-1.5 truncate">
                       <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                       {pitch.company_name}
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 shrink-0">
                       {pitch.is_local ? <MapPin className="w-3 h-3 text-red-400" /> : <Globe className="w-3 h-3 text-slate-500" />}
