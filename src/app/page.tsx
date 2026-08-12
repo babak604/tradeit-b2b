@@ -2,15 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
-import GlobalStageFeed from '@/components/GlobalStageFeed';
-import PitchUpload from '@/components/PitchUpload';
-import CircularLoopBanner from '@/components/CircularLoopBanner';
-import AuthModal from '@/components/AuthModal';
-import EscrowMilestoneTracker from '@/components/EscrowMilestoneTracker';
-import DemoStoryController from '@/components/DemoStoryController';
-import CompanyProfileDrawer from '@/components/CompanyProfileDrawer';
-import HowItWorksSection from '@/components/HowItWorksSection';
 import { DEMO_PRESET_OFFERS } from '@/lib/demo/demoSeedData';
 import { CircularLoopMatch } from '@/lib/matcher/circularTradeAgent';
 import { Button } from '@/components/ui/button';
@@ -19,7 +12,19 @@ import {
   Send, X, ArrowLeftRight, FileText, Download, CheckCircle2, UserCheck, LogIn, Bot, Loader2, Sparkles 
 } from 'lucide-react';
 
+// Dynamic Client Component Imports (Isolates Webpack Chunks & Breaks TDZ Loops)
+const GlobalStageFeed = dynamic(() => import('@/components/GlobalStageFeed'), { ssr: false });
+const PitchUpload = dynamic(() => import('@/components/PitchUpload'), { ssr: false });
+const CircularLoopBanner = dynamic(() => import('@/components/CircularLoopBanner'), { ssr: false });
+const AuthModal = dynamic(() => import('@/components/AuthModal'), { ssr: false });
+const EscrowMilestoneTracker = dynamic(() => import('@/components/EscrowMilestoneTracker'), { ssr: false });
+const DemoStoryController = dynamic(() => import('@/components/DemoStoryController'), { ssr: false });
+const CompanyProfileDrawer = dynamic(() => import('@/components/CompanyProfileDrawer'), { ssr: false });
+const HowItWorksSection = dynamic(() => import('@/components/HowItWorksSection'), { ssr: false });
+
 export default function MasterDashboardPage() {
+  const [mounted, setMounted] = useState(false);
+
   // Single-Page Modal & Drawer States
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -59,16 +64,19 @@ export default function MasterDashboardPage() {
   ]);
   const [newMessage, setNewMessage] = useState('');
 
-  // Check current auth session on mount
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) setCurrentUser(session.user.email);
     });
-  }, []);
+  }, [mounted]);
 
-  // Supabase Realtime Subscription for Live Chat & Contract Signatures
   useEffect(() => {
-    if (!activeDealId) return;
+    if (!mounted || !activeDealId) return;
 
     const channel = supabase.channel(`deal-room-${activeDealId}`, {
       config: { broadcast: { self: true } }
@@ -76,19 +84,22 @@ export default function MasterDashboardPage() {
 
     channel
       .on('broadcast', { event: 'chat-message' }, (payload) => {
-        setMessages((prev) => [...prev, payload.payload]);
+        if (payload?.payload) {
+          setMessages((prev) => [...prev, payload.payload]);
+        }
       })
       .on('broadcast', { event: 'sign-contract' }, (payload) => {
-        setDeal((prev) => ({ ...prev, [payload.payload.partyKey]: true }));
+        if (payload?.payload?.partyKey) {
+          setDeal((prev) => ({ ...prev, [payload.payload.partyKey]: true }));
+        }
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeDealId]);
+  }, [mounted, activeDealId]);
 
-  // Trigger Autonomous LLM Negotiation Agent
   const triggerAiAgentNegotiation = async () => {
     setAgentThinking(true);
     try {
@@ -96,15 +107,15 @@ export default function MasterDashboardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          myOfferSummary: deal.offer_a.offering,
-          theirOfferSummary: deal.offer_b.offering,
-          theirCompany: deal.offer_b.company,
+          myOfferSummary: deal?.offer_a?.offering ?? '',
+          theirOfferSummary: deal?.offer_b?.offering ?? '',
+          theirCompany: deal?.offer_b?.company ?? 'Counterparty',
           chatHistory: messages,
         }),
       });
 
       const data = await res.json();
-      if (data.decision) {
+      if (data?.decision) {
         const agentMsg = `🤖 [AI Agent]: ${data.decision.agentMessage}`;
         setMessages((prev) => [...prev, { sender: 'TradeIt Agent', text: agentMsg }]);
 
@@ -126,12 +137,14 @@ export default function MasterDashboardPage() {
     const msgPayload = { sender: currentUser || 'You', text: newMessage.trim() };
     setMessages((prev) => [...prev, msgPayload]);
 
-    const channel = supabase.channel(`deal-room-${activeDealId}`);
-    await channel.send({
-      type: 'broadcast',
-      event: 'chat-message',
-      payload: msgPayload,
-    });
+    if (activeDealId) {
+      const channel = supabase.channel(`deal-room-${activeDealId}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'chat-message',
+        payload: msgPayload,
+      });
+    }
 
     setNewMessage('');
   };
@@ -139,40 +152,42 @@ export default function MasterDashboardPage() {
   const handleSignAgreement = async () => {
     setDeal((prev) => ({ ...prev, signed_a: true }));
 
-    const channel = supabase.channel(`deal-room-${activeDealId}`);
-    await channel.send({
-      type: 'broadcast',
-      event: 'sign-contract',
-      payload: { partyKey: 'signed_a' },
-    });
+    if (activeDealId) {
+      const channel = supabase.channel(`deal-room-${activeDealId}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'sign-contract',
+        payload: { partyKey: 'signed_a' },
+      });
+    }
   };
 
   const handleInitiateCircularLoop = (loop: CircularLoopMatch) => {
+    if (!loop) return;
     setDeal({
-      id: loop.loop_id,
+      id: loop.loop_id || 'loop-demo',
       status: 'active-loop',
       signed_a: false,
       signed_b: false,
       offer_a: {
-        title: loop.node_a.offering_summary,
-        offering: loop.node_a.offering_summary,
-        looking_for: loop.node_a.looking_for_summary,
-        value: loop.node_a.estimated_value,
-        company: loop.node_a.company_name,
+        title: loop.node_a?.offering_summary ?? 'Offer A',
+        offering: loop.node_a?.offering_summary ?? 'Offer A',
+        looking_for: loop.node_a?.looking_for_summary ?? 'Need A',
+        value: loop.node_a?.estimated_value ?? 0,
+        company: loop.node_a?.company_name ?? 'Company A',
       },
       offer_b: {
-        title: loop.node_b.offering_summary,
-        offering: loop.node_b.offering_summary,
-        looking_for: loop.node_b.looking_for_summary,
-        value: loop.node_b.estimated_value,
-        company: loop.node_b.company_name,
+        title: loop.node_b?.offering_summary ?? 'Offer B',
+        offering: loop.node_b?.offering_summary ?? 'Offer B',
+        looking_for: loop.node_b?.looking_for_summary ?? 'Need B',
+        value: loop.node_b?.estimated_value ?? 0,
+        company: loop.node_b?.company_name ?? 'Company B',
       }
     });
 
-    setActiveDealId(loop.loop_id);
+    setActiveDealId(loop.loop_id || 'loop-demo');
   };
 
-  // Demo Scenarios Triggers
   const runDirectTwoWayDemo = () => {
     setDeal({
       id: 'demo-2way-swap',
@@ -180,18 +195,18 @@ export default function MasterDashboardPage() {
       signed_a: false,
       signed_b: false,
       offer_a: {
-        title: DEMO_PRESET_OFFERS[0].title,
-        offering: DEMO_PRESET_OFFERS[0].offering_summary,
-        looking_for: DEMO_PRESET_OFFERS[0].looking_for_summary,
-        value: DEMO_PRESET_OFFERS[0].estimated_value,
-        company: DEMO_PRESET_OFFERS[0].company_name
+        title: DEMO_PRESET_OFFERS[0]?.title ?? 'Surplus Apparel',
+        offering: DEMO_PRESET_OFFERS[0]?.offering_summary ?? '250 Hoodies',
+        looking_for: DEMO_PRESET_OFFERS[0]?.looking_for_summary ?? '4K Video Production',
+        value: DEMO_PRESET_OFFERS[0]?.estimated_value ?? 8500,
+        company: DEMO_PRESET_OFFERS[0]?.company_name ?? 'Easy Mondays Apparel'
       },
       offer_b: {
-        title: DEMO_PRESET_OFFERS[1].title,
-        offering: DEMO_PRESET_OFFERS[1].offering_summary,
-        looking_for: DEMO_PRESET_OFFERS[1].looking_for_summary,
-        value: DEMO_PRESET_OFFERS[1].estimated_value,
-        company: DEMO_PRESET_OFFERS[1].company_name
+        title: DEMO_PRESET_OFFERS[1]?.title ?? '4K Video Production',
+        offering: DEMO_PRESET_OFFERS[1]?.offering_summary ?? '50 Studio Hours',
+        looking_for: DEMO_PRESET_OFFERS[1]?.looking_for_summary ?? 'Office Space',
+        value: DEMO_PRESET_OFFERS[1]?.estimated_value ?? 5000,
+        company: DEMO_PRESET_OFFERS[1]?.company_name ?? 'Montreal Creative Studios'
       }
     });
     setMessages([
@@ -219,6 +234,8 @@ export default function MasterDashboardPage() {
     }, 300);
   };
 
+  if (!mounted) return null;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-x-hidden">
       
@@ -236,7 +253,6 @@ export default function MasterDashboardPage() {
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* Link to Pricing & Membership Pass Page */}
           <Link href="/pricing">
             <Button
               variant="outline"
@@ -286,7 +302,7 @@ export default function MasterDashboardPage() {
         </div>
       </header>
 
-      {/* Main Single-Page Dashboard Area */}
+      {/* Main Dashboard Area */}
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 space-y-6 relative print:hidden">
         
         {/* Interactive Investor Product Demo Controller */}
@@ -331,21 +347,21 @@ export default function MasterDashboardPage() {
               {/* Side-by-Side Offer Summary */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div 
-                  onClick={() => setSelectedCompanyProfile(deal.offer_a.company)}
+                  onClick={() => setSelectedCompanyProfile(deal?.offer_a?.company ?? null)}
                   className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1 hover:border-slate-700 cursor-pointer transition-all"
                 >
-                  <p className="text-[10px] font-bold text-emerald-400 uppercase">{deal.offer_a.company} ↗</p>
-                  <p className="font-bold text-white line-clamp-1">{deal.offer_a.title}</p>
-                  <p className="text-slate-400 font-mono text-[10px]">${deal.offer_a.value.toLocaleString()} CAD Value</p>
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase">{deal?.offer_a?.company ?? 'Party A'} ↗</p>
+                  <p className="font-bold text-white line-clamp-1">{deal?.offer_a?.title ?? 'Offer A'}</p>
+                  <p className="text-slate-400 font-mono text-[10px]">${(deal?.offer_a?.value ?? 0).toLocaleString()} CAD Value</p>
                 </div>
 
                 <div 
-                  onClick={() => setSelectedCompanyProfile(deal.offer_b.company)}
+                  onClick={() => setSelectedCompanyProfile(deal?.offer_b?.company ?? null)}
                   className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1 hover:border-slate-700 cursor-pointer transition-all"
                 >
-                  <p className="text-[10px] font-bold text-blue-400 uppercase">{deal.offer_b.company} ↗</p>
-                  <p className="font-bold text-white line-clamp-1">{deal.offer_b.title}</p>
-                  <p className="text-slate-400 font-mono text-[10px]">${deal.offer_b.value.toLocaleString()} CAD Value</p>
+                  <p className="text-[10px] font-bold text-blue-400 uppercase">{deal?.offer_b?.company ?? 'Party B'} ↗</p>
+                  <p className="font-bold text-white line-clamp-1">{deal?.offer_b?.title ?? 'Offer B'}</p>
+                  <p className="text-slate-400 font-mono text-[10px]">${(deal?.offer_b?.value ?? 0).toLocaleString()} CAD Value</p>
                 </div>
               </div>
 
@@ -481,7 +497,7 @@ export default function MasterDashboardPage() {
               <div className="flex justify-between items-start border-b pb-3">
                 <div>
                   <h2 className="text-lg font-black tracking-tight font-sans">TRADEIT AI BARTER SWAP CONTRACT</h2>
-                  <p className="text-[10px] text-slate-500 font-mono">Contract ID: {deal.id} • Hash: 0x8F92...C10A</p>
+                  <p className="text-[10px] text-slate-500 font-mono">Contract ID: {deal?.id} • Hash: 0x8F92...C10A</p>
                 </div>
                 <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded font-sans">
                   LEGALLY BINDING
@@ -491,15 +507,15 @@ export default function MasterDashboardPage() {
               <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 font-sans">
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase font-bold">Party A</p>
-                  <p className="font-extrabold text-slate-900">{deal.offer_a.company}</p>
-                  <p className="text-[11px] text-slate-600">{deal.offer_a.offering}</p>
-                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal.offer_a.value} CAD Value</p>
+                  <p className="font-extrabold text-slate-900">{deal?.offer_a?.company}</p>
+                  <p className="text-[11px] text-slate-600">{deal?.offer_a?.offering}</p>
+                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal?.offer_a?.value} CAD Value</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase font-bold">Party B</p>
-                  <p className="font-extrabold text-slate-900">{deal.offer_b.company}</p>
-                  <p className="text-[11px] text-slate-600">{deal.offer_b.offering}</p>
-                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal.offer_b.value} CAD Value</p>
+                  <p className="font-extrabold text-slate-900">{deal?.offer_b?.company}</p>
+                  <p className="text-[11px] text-slate-600">{deal?.offer_b?.offering}</p>
+                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal?.offer_b?.value} CAD Value</p>
                 </div>
               </div>
 

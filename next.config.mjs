@@ -12,6 +12,13 @@ const nextConfig = {
     // !! WARN !!
     ignoreBuildErrors: true,
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Preserves unminified variable & component names in dev console
+      config.devtool = 'eval-source-map';
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

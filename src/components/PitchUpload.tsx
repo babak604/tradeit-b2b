@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { 
   X, UploadCloud, Loader2, CheckCircle2, Sparkles, Wand2, 
-  Video, Mic, Square, RotateCcw, Upload, AlertCircle 
+  Mic, Square, RotateCcw, Upload, AlertCircle 
 } from 'lucide-react';
 
 interface PitchUploadProps {
@@ -46,18 +46,20 @@ export default function PitchUpload({ isOpen, onClose, onUploadSuccess }: PitchU
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  // Cleanup camera stream when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      stopCamera();
+  // 1. Camera & Recording Handlers (Declared BEFORE useEffect)
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-  }, [isOpen]);
+  };
 
-  if (!isOpen) return null;
-
-  // Camera & Recording Handlers
   const startCamera = async () => {
     try {
+      if (typeof window === 'undefined' || !navigator?.mediaDevices?.getUserMedia) {
+        setErrorMsg('Camera recording is not supported in this environment.');
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -69,12 +71,14 @@ export default function PitchUpload({ isOpen, onClose, onUploadSuccess }: PitchU
     }
   };
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+  // 2. Cleanup effect calling initialized stopCamera helper
+  useEffect(() => {
+    if (!isOpen) {
+      stopCamera();
     }
-  };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleModeSwitch = (newMode: 'upload' | 'record') => {
     setMode(newMode);
