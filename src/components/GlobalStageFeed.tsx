@@ -75,7 +75,7 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
     function processData(data: any[]) {
       if (Array.isArray(data)) {
         const formatted = data.map((item) => {
-          let url = item.video_url || '';
+          let url = item?.video_url || '';
           if (url && !url.startsWith('http')) {
             const { data: urlData } = supabase.storage
               .from('trade-media')
@@ -83,16 +83,16 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
             url = urlData?.publicUrl || url;
           }
           return {
-            id: item.id || String(Math.random()),
+            id: item?.id || `pitch-${Math.random().toString(36).substring(2, 9)}`,
             video_url: url,
-            title: item.title || '60s Trade Pitch',
-            company_name: item.companies?.name || 'Verified Member',
-            location: item.companies?.location_name || 'Montreal, QC',
-            offering_summary: item.offering_summary || item.offering_tag || 'Unspecified Offer',
-            looking_for_summary: item.looking_for_summary || item.seeking_tag || 'Unspecified Need',
-            estimated_value: item.estimated_value ?? item.amount ?? item.value_amount ?? 0,
-            category: item.category || 'B2B Services',
-            is_local: Boolean(item.is_local_physical),
+            title: item?.title || '60s Trade Pitch',
+            company_name: item?.companies?.name ?? item?.company_name ?? 'Verified Member',
+            location: item?.companies?.location_name ?? item?.location ?? 'Montreal, QC',
+            offering_summary: item?.offering_summary ?? item?.offering_tag ?? 'Unspecified Offer',
+            looking_for_summary: item?.looking_for_summary ?? item?.seeking_tag ?? 'Unspecified Need',
+            estimated_value: Number(item?.estimated_value ?? item?.amount ?? item?.value_amount ?? 0),
+            category: item?.category || 'B2B Services',
+            is_local: Boolean(item?.is_local_physical),
             is_verified: true,
           };
         });
@@ -104,17 +104,23 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
     fetchPitches();
   }, [mounted]);
 
-  // Dynamic Filtering Pipeline
+  // Dynamic Filtering Pipeline with Strict Safeguards
   const filteredPitches = useMemo(() => {
+    if (!Array.isArray(pitches)) return [];
+
     return pitches.filter((pitch) => {
+      if (!pitch) return false;
+      const query = searchQuery ? searchQuery.toLowerCase() : '';
+
       const matchesSearch = 
-        pitch.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pitch.offering_summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pitch.looking_for_summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pitch.company_name.toLowerCase().includes(searchQuery.toLowerCase());
+        (pitch.title ?? '').toLowerCase().includes(query) ||
+        (pitch.offering_summary ?? '').toLowerCase().includes(query) ||
+        (pitch.looking_for_summary ?? '').toLowerCase().includes(query) ||
+        (pitch.company_name ?? '').toLowerCase().includes(query);
 
       const matchesCategory = 
-        selectedCategory === 'All' || pitch.category.toLowerCase() === selectedCategory.toLowerCase();
+        selectedCategory === 'All' || 
+        (pitch.category ?? '').toLowerCase() === selectedCategory.toLowerCase();
 
       const matchesLocation = 
         locationFilter === 'all' || 
@@ -278,7 +284,7 @@ export default function GlobalStageFeed({ onSelectDeal }: { onSelectDeal?: (id: 
               {/* Top Badges */}
               <div className="relative z-20 p-4 flex items-center justify-between">
                 <span className="bg-slate-950/80 backdrop-blur-md border border-slate-800 text-emerald-400 text-xs font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
-                  ${pitch.estimated_value?.toLocaleString()} CAD
+                  ${(pitch.estimated_value ?? 0).toLocaleString()} CAD
                 </span>
                 <span className="bg-slate-950/80 backdrop-blur-md border border-slate-800 text-slate-300 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                   {pitch.category}
