@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import GlobalStageFeed from '@/components/GlobalStageFeed';
 import PitchUpload from '@/components/PitchUpload';
@@ -14,7 +15,7 @@ import { CircularLoopMatch } from '@/lib/matcher/circularTradeAgent';
 import { Button } from '@/components/ui/button';
 import { 
   Tornado, PlusCircle, ShieldCheck, 
-  Send, X, ArrowLeftRight, FileText, Download, CheckCircle2, UserCheck, LogIn, Bot, Loader2 
+  Send, X, ArrowLeftRight, FileText, Download, CheckCircle2, UserCheck, LogIn, Bot, Loader2, Sparkles 
 } from 'lucide-react';
 
 export default function MasterDashboardPage() {
@@ -234,6 +235,18 @@ export default function MasterDashboardPage() {
         </div>
 
         <div className="flex items-center space-x-3">
+          {/* Link to Pricing & Membership Pass Page */}
+          <Link href="/pricing">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-slate-900 border-slate-800 text-slate-300 hover:text-white text-xs cursor-pointer flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Membership Plans</span>
+            </Button>
+          </Link>
+
           {currentUser ? (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/60 border border-emerald-500/30 rounded-xl text-xs font-bold text-emerald-400">
               <UserCheck className="w-3.5 h-3.5" />
