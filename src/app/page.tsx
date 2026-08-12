@@ -10,6 +10,7 @@ import AuthModal from '@/components/AuthModal';
 import EscrowMilestoneTracker from '@/components/EscrowMilestoneTracker';
 import DemoStoryController from '@/components/DemoStoryController';
 import CompanyProfileDrawer from '@/components/CompanyProfileDrawer';
+import HowItWorksSection from '@/components/HowItWorksSection';
 import { DEMO_PRESET_OFFERS } from '@/lib/demo/demoSeedData';
 import { CircularLoopMatch } from '@/lib/matcher/circularTradeAgent';
 import { Button } from '@/components/ui/button';
@@ -420,6 +421,9 @@ export default function MasterDashboardPage() {
           )}
 
         </div>
+
+        {/* How It Works Visual Narrative Section */}
+        <HowItWorksSection />
 
       </main>
 
