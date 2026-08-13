@@ -48,7 +48,8 @@
     "tailwindcss": "^4.0.6",
     "ts-jest": "^29.4.12",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
   },
   "allowScripts": {
     "sharp@0.34.5": true,
