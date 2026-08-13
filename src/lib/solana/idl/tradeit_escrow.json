@@ -1,0 +1,199 @@
+{
+  "address": "Es7dux19AYKphx5PtTn7vsem96pqTBKc6oQp9gosfERi",
+  "metadata": {
+    "name": "tradeit_escrow",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "initialize_cycle_escrow",
+      "discriminator": [
+        78,
+        53,
+        159,
+        143,
+        121,
+        45,
+        91,
+        0
+      ],
+      "accounts": [
+        {
+          "name": "escrow_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "deal_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "initializer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "deal_id",
+          "type": "string"
+        },
+        {
+          "name": "cycle_capacity_lamports",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit_rwa_token",
+      "discriminator": [
+        10,
+        159,
+        108,
+        91,
+        38,
+        67,
+        123,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "depositor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "depositor_token_account",
+          "writable": true
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "escrow_account"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "execute_atomic_ring_settlement",
+      "discriminator": [
+        218,
+        134,
+        119,
+        160,
+        100,
+        3,
+        129,
+        11
+      ],
+      "accounts": [
+        {
+          "name": "escrow_account",
+          "writable": true
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true
+        },
+        {
+          "name": "initializer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "CycleEscrowAccount",
+      "discriminator": [
+        237,
+        189,
+        208,
+        187,
+        15,
+        234,
+        64,
+        103
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "CycleEscrowAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "initializer",
+            "type": "pubkey"
+          },
+          {
+            "name": "deal_id",
+            "type": "string"
+          },
+          {
+            "name": "cycle_capacity",
+            "type": "u64"
+          },
+          {
+            "name": "is_locked",
+            "type": "bool"
+          },
+          {
+            "name": "is_settled",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

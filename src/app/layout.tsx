@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { ToastProvider } from '@/components/providers/ToastProvider';
 import { RealtimeDealListener } from '@/components/providers/RealtimeDealListener';
+import { WalletContextProvider } from '@/components/solana/WalletContextProvider';
 // @ts-expect-error Next.js handles this CSS side-effect import at build time.
 import './globals.css';
 
@@ -29,10 +30,12 @@ export default async function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-slate-950 text-slate-100 antialiased selection:bg-sky-500 selection:text-white hide-scrollbar">
-        <ToastProvider>
-          {companyId && <RealtimeDealListener companyId={companyId} />}
-          {children}
-        </ToastProvider>
+        <WalletContextProvider>
+          <ToastProvider>
+            {companyId && <RealtimeDealListener companyId={companyId} />}
+            {children}
+          </ToastProvider>
+        </WalletContextProvider>
       </body>
     </html>
   );
