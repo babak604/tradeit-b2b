@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Initialize client with environment variables or fallback
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
@@ -63,7 +62,7 @@ export function subscribeToDealHistory(callback: (record: DealHistoryRecord) => 
 }
 
 /**
- * Log a new transaction event to Supabase
+ * Log a new transaction event to Supabase & auto-sync deal status
  */
 export async function logDealTransaction(payload: {
   dealId: string;
@@ -75,7 +74,8 @@ export async function logDealTransaction(payload: {
   amount?: number;
 }) {
   try {
-    const { error } = await supabase.from("deal_history").insert([
+    // 1. Log transaction to audit trail
+    const { error: historyError } = await supabase.from("deal_history").insert([
       {
         deal_id: payload.dealId,
         event_type: payload.eventType,
@@ -87,10 +87,27 @@ export async function logDealTransaction(payload: {
       },
     ]);
 
-    if (error) {
-      console.error("Error logging deal transaction to Supabase:", error.message);
+    if (historyError) {
+      console.error("Error logging deal transaction to Supabase:", historyError.message);
+    }
+
+    // 2. Map event to deal status & attempt sync
+    let dealStatus = "";
+    if (payload.eventType === "INITIALIZE") dealStatus = "ESCROW_INITIALIZED";
+    if (payload.eventType === "DEPOSIT") dealStatus = "ESCROW_FUNDED";
+    if (payload.eventType === "SETTLEMENT") dealStatus = "SETTLED";
+
+    if (dealStatus) {
+      const { error: dealSyncError } = await supabase
+        .from("deals")
+        .update({ status: dealStatus, updated_at: new Date().toISOString() })
+        .eq("id", payload.dealId);
+
+      if (dealSyncError) {
+        console.warn("Notice: Status update on 'deals' table skipped (table or record may not exist yet).");
+      }
     }
   } catch (err) {
-    console.error("Unexpected error logging transaction:", err);
+    console.error("Unexpected error logging transaction or syncing deal state:", err);
   }
 }
