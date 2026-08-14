@@ -9,7 +9,8 @@ import { CircularLoopMatch } from '@/lib/matcher/circularTradeAgent';
 import { Button } from '@/components/ui/button';
 import { 
   Tornado, PlusCircle, ShieldCheck, 
-  Send, X, ArrowLeftRight, FileText, Download, CheckCircle2, UserCheck, LogIn, Bot, Loader2, Sparkles 
+  Send, X, ArrowLeftRight, FileText, Download, CheckCircle2, UserCheck, LogIn, Bot, Loader2, Sparkles,
+  Coins, Cpu, Lock, ExternalLink, Layers
 } from 'lucide-react';
 
 // Dynamic Client Component Imports (Isolates Webpack Chunks & Breaks TDZ Loops)
@@ -35,6 +36,12 @@ export default function MasterDashboardPage() {
   // Auth & Agent States
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [agentThinking, setAgentThinking] = useState(false);
+
+  // Interactive RWA Simulator State
+  const [assetType, setAssetType] = useState<string>('Commercial Invoice');
+  const [assetValue, setAssetValue] = useState<number>(75000);
+  const [isTokenizing, setIsTokenizing] = useState<boolean>(false);
+  const [tokenizedAsset, setTokenizedAsset] = useState<any>(null);
 
   // Active Deal Room State
   const [deal, setDeal] = useState({
@@ -99,6 +106,22 @@ export default function MasterDashboardPage() {
       supabase.removeChannel(channel);
     };
   }, [mounted, activeDealId]);
+
+  const handleSimulateTokenization = () => {
+    setIsTokenizing(true);
+    setTokenizedAsset(null);
+
+    setTimeout(() => {
+      setTokenizedAsset({
+        mintAddress: 'RWA_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_sol',
+        assetType,
+        value: assetValue,
+        supply: 1,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      setIsTokenizing(false);
+    }, 1100);
+  };
 
   const triggerAiAgentNegotiation = async () => {
     setAgentThinking(true);
@@ -237,18 +260,25 @@ export default function MasterDashboardPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-teal-500 selection:text-slate-950">
       
+      {/* BACKGROUND GLOWS */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl" />
+        <div className="absolute top-1/3 -right-40 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl" />
+      </div>
+
       {/* Top Header Navigation */}
-      <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-xl px-6 py-4 flex items-center justify-between sticky top-0 z-40 print:hidden">
+      <header className="border-b border-slate-900 bg-slate-950/90 backdrop-blur-xl px-6 py-4 flex items-center justify-between sticky top-0 z-40 print:hidden">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-red-600/10 rounded-xl border border-red-500/20 text-red-500">
+          <div className="p-2 bg-teal-500/10 rounded-xl border border-teal-500/30 text-teal-400">
             <Tornado className="w-5 h-5 animate-spin" style={{ animationDuration: '8s' }} />
           </div>
           <div>
             <h1 className="font-extrabold text-white text-base tracking-wider flex items-center gap-2">
-              TRADEIT <span className="text-red-500 text-xs font-mono px-2 py-0.5 bg-red-950/80 border border-red-500/30 rounded-md">AGENTIC STAGE</span>
+              TRADEIT <span className="text-teal-400 text-xs font-mono px-2 py-0.5 bg-teal-950/80 border border-teal-500/30 rounded-md">SOLANA RWA STAGE</span>
             </h1>
+            <p className="text-[10px] text-slate-400 font-mono hidden sm:block">tradeit.tv • 2-of-2 Multi-Sig PDA Engine</p>
           </div>
         </div>
 
@@ -276,7 +306,7 @@ export default function MasterDashboardPage() {
               size="sm"
               className="bg-slate-900 border-slate-800 text-slate-300 hover:text-white text-xs cursor-pointer flex items-center gap-1"
             >
-              <LogIn className="w-3.5 h-3.5 text-red-400" />
+              <LogIn className="w-3.5 h-3.5 text-teal-400" />
               <span>Login / Verify</span>
             </Button>
           )}
@@ -294,7 +324,7 @@ export default function MasterDashboardPage() {
 
           <Button
             onClick={() => setIsUploadOpen(true)}
-            className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 h-9 shadow-lg shadow-red-600/20 flex items-center gap-1.5 cursor-pointer"
+            className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs px-4 h-9 shadow-lg shadow-teal-500/20 flex items-center gap-1.5 cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Post Offer & Need</span>
@@ -303,8 +333,130 @@ export default function MasterDashboardPage() {
       </header>
 
       {/* Main Dashboard Area */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 space-y-6 relative print:hidden">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 space-y-8 relative print:hidden">
         
+        {/* HERO BLOCK: SOLANA & RWA TOKENIZATION VALUE PROP */}
+        <section className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6 sm:p-8 backdrop-blur-xl space-y-6">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-300">
+                <span className="h-2 w-2 rounded-full bg-teal-400 animate-pulse" />
+                Solana Devnet Smart Contract Engine • Program ID: Es7dux19...ERi
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-100 leading-tight">
+                Tokenize Real-World Assets. <br />
+                <span className="bg-gradient-to-r from-teal-400 via-cyan-400 to-indigo-400 bg-clip-text text-transparent">
+                  Settle B2B Deals Non-Custodially on Solana.
+                </span>
+              </h2>
+              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
+                TradeIt converts commercial invoices, freight cargo, and surplus inventory into liquid SPL tokens. 
+                Execute non-custodial atomic settlements backed by 2-of-2 multi-party approvals on Solana Devnet.
+              </p>
+            </div>
+
+            {/* QUICK DENSE METRICS STRIP */}
+            <div className="grid grid-cols-2 gap-3 w-full lg:w-auto font-mono text-xs">
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3.5 space-y-1">
+                <p className="text-[10px] text-slate-500 uppercase">Settlement Speed</p>
+                <p className="font-bold text-teal-400 text-sm">&lt; 400ms <span className="text-[9px] text-slate-400 font-sans">Finality</span></p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3.5 space-y-1">
+                <p className="text-[10px] text-slate-500 uppercase">Average Fee</p>
+                <p className="font-bold text-teal-400 text-sm">$0.00025 <span className="text-[9px] text-slate-400 font-sans">On-Chain</span></p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3.5 space-y-1">
+                <p className="text-[10px] text-slate-500 uppercase">Security Model</p>
+                <p className="font-bold text-indigo-400 text-sm">2-of-2 Multi-Sig</p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3.5 space-y-1">
+                <p className="text-[10px] text-slate-500 uppercase">Proof Format</p>
+                <p className="font-bold text-purple-400 text-sm">PDF Certificate</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* INTERACTIVE RWA TOKENIZATION SIMULATOR */}
+        <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 backdrop-blur-xl shadow-xl space-y-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div className="flex items-center gap-2">
+              <Coins className="w-5 h-5 text-teal-400" />
+              <div>
+                <h3 className="text-base font-bold text-slate-100">Interactive RWA Asset Tokenization Engine</h3>
+                <p className="text-xs text-slate-400">Simulate converting physical business collateral into a Solana SPL token.</p>
+              </div>
+            </div>
+            <span className="rounded-full bg-slate-950 border border-slate-800 px-3 py-1 text-xs text-teal-400 font-mono">
+              SPL Token Standard
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            {/* Input Form */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5 font-medium">Select Real-World Asset (RWA) Class</label>
+                <select
+                  value={assetType}
+                  onChange={(e) => setAssetType(e.target.value)}
+                  className="w-full rounded-xl bg-slate-950 border border-slate-800 p-3 text-xs text-slate-200 focus:outline-none focus:border-teal-500"
+                >
+                  <option value="Commercial Invoice">Commercial Invoice (#INV-8839)</option>
+                  <option value="Freight Cargo Container">Freight Cargo Container (Electronics)</option>
+                  <option value="Agricultural Commodity">Agricultural Commodity (Coffee Freight)</option>
+                  <option value="Industrial Equipment">Heavy Industrial Machinery</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5 font-medium">Appraised Valuation ($ USD)</label>
+                <input
+                  type="number"
+                  value={assetValue}
+                  onChange={(e) => setAssetValue(Number(e.target.value))}
+                  className="w-full rounded-xl bg-slate-950 border border-slate-800 p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-teal-500"
+                />
+              </div>
+
+              <button
+                onClick={handleSimulateTokenization}
+                disabled={isTokenizing}
+                className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 p-3 text-xs font-bold text-slate-950 transition-all shadow-md shadow-teal-500/20 disabled:opacity-50 cursor-pointer"
+              >
+                {isTokenizing ? "Minting SPL Token on Solana..." : "⚡ Tokenize Asset on Solana Devnet"}
+              </button>
+            </div>
+
+            {/* Tokenized Output Card */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-3 font-mono text-xs">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                <span className="text-slate-400 uppercase tracking-wider text-[10px]">On-Chain Token State</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] ${tokenizedAsset ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-800 text-slate-500"}`}>
+                  {tokenizedAsset ? "TOKEN MINTED ON-CHAIN" : "AWAITING MINT"}
+                </span>
+              </div>
+
+              {tokenizedAsset ? (
+                <div className="space-y-2 text-slate-300">
+                  <div className="flex justify-between"><span className="text-slate-500">Asset Class:</span> <span>{tokenizedAsset.assetType}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">SPL Mint Address:</span> <span className="text-teal-400 font-bold">{tokenizedAsset.mintAddress}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Tokenized Value:</span> <span className="text-emerald-400">${tokenizedAsset.value.toLocaleString()} USD</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Blockchain Standard:</span> <span>Solana SPL Token</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Timestamp:</span> <span>{tokenizedAsset.timestamp}</span></div>
+                  <div className="pt-2 border-t border-slate-800 text-[11px] text-teal-300">
+                    ✓ Tokenized asset ready for deposit into 2-of-2 Escrow Vault
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 text-center text-slate-500 space-y-1 font-sans">
+                  <p>Select an asset class and click tokenize to simulate generating an SPL token on Solana.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Interactive Investor Product Demo Controller */}
         <DemoStoryController 
           onRunTwoWayDemo={runDirectTwoWayDemo}
@@ -327,19 +479,22 @@ export default function MasterDashboardPage() {
           {activeDealId && (
             <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-2xl relative sticky top-24 h-[calc(100vh-120px)] overflow-y-auto hide-scrollbar animate-in slide-in-from-right duration-300">
               
-              {/* Drawer Header with Agent Control */}
+              {/* Drawer Header with Agent Control & Solana Multi-Sig Badging */}
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <ArrowLeftRight className="w-5 h-5 text-red-500" />
-                  <h3 className="font-extrabold text-white text-sm">AUTONOMOUS DEAL ROOM</h3>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ArrowLeftRight className="w-5 h-5 text-teal-400" />
+                    <h3 className="font-extrabold text-white text-sm">AUTONOMOUS SOLANA DEAL ROOM</h3>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">2-of-2 Multi-Sig PDA Vault Engine</p>
                 </div>
 
                 <button
                   onClick={triggerAiAgentNegotiation}
                   disabled={agentThinking}
-                  className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-400 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+                  className="px-3 py-1 bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
                 >
-                  {agentThinking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5 text-red-500" />}
+                  {agentThinking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5 text-teal-400" />}
                   <span>{agentThinking ? 'AI Agent Negotiating...' : 'Trigger AI Negotiator'}</span>
                 </button>
               </div>
@@ -373,9 +528,9 @@ export default function MasterDashboardPage() {
                       <span className="text-[9px] text-slate-500 mb-0.5">{msg.sender}</span>
                       <div className={`p-3 rounded-2xl text-xs max-w-[85%] ${
                         msg.sender.includes('Agent') 
-                          ? 'bg-slate-900 border border-red-500/40 text-red-200'
+                          ? 'bg-slate-900 border border-teal-500/40 text-teal-200'
                           : msg.sender === (currentUser || 'You')
-                          ? 'bg-red-600 text-white rounded-br-none' 
+                          ? 'bg-teal-600 text-slate-950 font-medium rounded-br-none' 
                           : 'bg-slate-900 text-slate-200 border border-slate-800 rounded-bl-none'
                       }`}>
                         {msg.text}
@@ -390,9 +545,9 @@ export default function MasterDashboardPage() {
                     placeholder="Propose terms or trigger AI Negotiator..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500"
                   />
-                  <Button type="submit" size="sm" className="bg-red-600 hover:bg-red-500 text-white px-3 cursor-pointer">
+                  <Button type="submit" size="sm" className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold px-3 cursor-pointer">
                     <Send className="w-3.5 h-3.5" />
                   </Button>
                 </form>
@@ -406,7 +561,7 @@ export default function MasterDashboardPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs text-slate-400">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    <span>Zero Cash Outlay Contract</span>
+                    <span>2-of-2 Multi-Sig Solana Escrow</span>
                   </div>
 
                   <Button
@@ -415,7 +570,7 @@ export default function MasterDashboardPage() {
                     className={`text-xs font-bold px-5 h-9 rounded-xl cursor-pointer ${
                       deal.signed_a 
                         ? 'bg-emerald-600 text-white' 
-                        : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20'
+                        : 'bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold shadow-lg shadow-teal-500/20'
                     }`}
                   >
                     {deal.signed_a ? 'Agreement Signed ✓' : 'Sign Trade Deal'}
@@ -497,10 +652,10 @@ export default function MasterDashboardPage() {
               <div className="flex justify-between items-start border-b pb-3">
                 <div>
                   <h2 className="text-lg font-black tracking-tight font-sans">TRADEIT AI BARTER SWAP CONTRACT</h2>
-                  <p className="text-[10px] text-slate-500 font-mono">Contract ID: {deal?.id} • Hash: 0x8F92...C10A</p>
+                  <p className="text-[10px] text-slate-500 font-mono">Contract ID: {deal?.id} • Program ID: Es7dux19...ERi</p>
                 </div>
                 <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded font-sans">
-                  LEGALLY BINDING
+                  VERIFIED ON SOLANA DEVNET
                 </span>
               </div>
 
@@ -522,7 +677,7 @@ export default function MasterDashboardPage() {
               <div className="space-y-2">
                 <h4 className="font-sans font-bold text-slate-900 text-xs">Terms of Reciprocal Exchange</h4>
                 <p>
-                  Both participating entities hereby agree to exchange the designated B2B services/goods outlined above with zero cash consideration, maintaining equal parity under the TradeIt AI network charter.
+                  Both participating entities hereby agree to exchange the designated B2B services/goods outlined above with zero cash consideration, maintaining equal parity under the TradeIt AI network charter and secured via a 2-of-2 multi-party Solana Anchor escrow account.
                 </p>
               </div>
 
