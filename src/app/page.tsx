@@ -11,7 +11,7 @@ import {
   Tornado, PlusCircle, ShieldCheck, 
   Send, X, ArrowLeftRight, FileText, Download, CheckCircle2, UserCheck, LogIn, Bot, Loader2, Sparkles,
   Coins, Search, Command, Activity, BadgeCheck, Check, ArrowRight, FileCheck, Layers, Lock, KeyRound, Receipt, Scale,
-  Building2, MegaPhone, FileSpreadsheet, Calculator, AlertCircle, ArrowUpRight
+  Building2, Megaphone, FileSpreadsheet, Calculator, Briefcase, ExternalLink, Clock, Wallet
 } from 'lucide-react';
 
 // Dynamic Client Component Imports
@@ -47,7 +47,17 @@ export default function MasterDashboardPage() {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [agentThinking, setAgentThinking] = useState(false);
 
-  // FEATURE 3: REVERSE RFQ / CORPORATE NEEDS BOARD STATE
+  // FREELANCER & SMB BARTER WALLET BALANCE
+  const [smbTradeCredits, setSmbTradeCredits] = useState<number>(1850);
+
+  // FREELANCER SOW MILESTONE BUILDER STATE
+  const [sowMilestones, setSowMilestones] = useState([
+    { id: 1, title: 'Scope Wireframes & Brand Strategy', percent: 30, completed: true },
+    { id: 2, title: 'Deliver Initial Assets & First Draft', percent: 40, completed: false },
+    { id: 3, title: 'Final Handover & Source File Release', percent: 30, completed: false },
+  ]);
+
+  // REVERSE RFQ / CORPORATE NEEDS BOARD STATE
   const [rfqNeeds, setRfqNeeds] = useState([
     {
       id: 'rfq-1',
@@ -103,6 +113,8 @@ export default function MasterDashboardPage() {
       value: 8500,
       company: 'Easy Mondays Apparel',
       verified: true,
+      skills: ['Apparel Design', 'E-Commerce Supply', 'Logistics'],
+      portfolioUrl: 'https://easymondays.com',
       duns: 'D-U-N-S #8849201'
     },
     offer_b: {
@@ -112,13 +124,15 @@ export default function MasterDashboardPage() {
       value: 5000,
       company: 'Montreal Creative Studios',
       verified: true,
+      skills: ['4K Camera Operations', 'DaVinci Color Grading', 'Motion Graphics'],
+      portfolioUrl: 'https://vimeo.com',
       duns: 'D-U-N-S #9930214'
     }
   });
 
   const [messages, setMessages] = useState([
     { sender: 'Montreal Creative Studios', text: 'Hey! Our studio crew is open next week for filming. Can you prepare the apparel items?' },
-    { sender: 'You', text: 'Sounds great! Inventory is cataloged and ready for pickup.' }
+    { sender: 'You', text: 'Sounds great! Scope milestones are added to the SOW engine.' }
   ]);
   const [newMessage, setNewMessage] = useState('');
 
@@ -286,6 +300,10 @@ export default function MasterDashboardPage() {
     }
   };
 
+  const toggleSowMilestone = (id: number) => {
+    setSowMilestones((prev) => prev.map((m) => m.id === id ? { ...m, completed: !m.completed } : m));
+  };
+
   const handleBidOnRfqNeed = (rfq: typeof rfqNeeds[0]) => {
     setDeal({
       id: `rfq-deal-${rfq.id}`,
@@ -293,61 +311,35 @@ export default function MasterDashboardPage() {
       signed_a: false,
       signed_b: false,
       offer_a: {
-        title: 'Surplus Capacity / Inventory Bid',
-        offering: 'Spare Operational Capacity / Asset Deposit',
+        title: 'Freelancer / SMB Service Capacity Bid',
+        offering: 'Professional Service Capacity / Hours',
         looking_for: rfq.title,
         value: rfq.targetFmv,
-        company: 'Your Enterprise',
+        company: 'Your Freelance Studio',
         verified: true,
+        skills: ['Verified Freelancer', '5★ Rated', 'Instant Availability'],
+        portfolioUrl: 'https://tradeit.tv',
         duns: 'D-U-N-S Verified'
       },
       offer_b: {
         title: rfq.title,
         offering: rfq.offeringTrade,
-        looking_for: 'Surplus Capacity Bid',
+        looking_for: 'Freelancer Service Capacity Bid',
         value: rfq.targetFmv,
         company: rfq.company,
         verified: true,
+        skills: ['Corporate Member', 'D&B Verified'],
+        portfolioUrl: 'https://tradeit.tv',
         duns: rfq.verifiedDuns
       }
     });
 
     setMessages([
-      { sender: rfq.company, text: `We posted a need for: ${rfq.title}. Can your business handle this requirement via reciprocal trade?` },
-      { sender: 'You', text: `Yes! We can fulfill this need with our surplus capacity. Let's execute the barter terms.` }
+      { sender: rfq.company, text: `We posted a need for: ${rfq.title}. Can your studio handle this requirement via reciprocal trade?` },
+      { sender: 'You', text: `Yes! Our freelance studio can fulfill this need. Milestones and scope are set up in the SOW builder.` }
     ]);
 
     setActiveDealId(`rfq-deal-${rfq.id}`);
-  };
-
-  const handleInitiateCircularLoop = (loop: CircularLoopMatch) => {
-    if (!loop) return;
-    setDeal({
-      id: loop.loop_id || 'loop-demo',
-      status: 'active-loop',
-      signed_a: false,
-      signed_b: false,
-      offer_a: {
-        title: loop.node_a?.offering_summary ?? 'Offer A',
-        offering: loop.node_a?.offering_summary ?? 'Offer A',
-        looking_for: loop.node_a?.looking_for_summary ?? 'Need A',
-        value: loop.node_a?.estimated_value ?? 0,
-        company: loop.node_a?.company_name ?? 'Company A',
-        verified: true,
-        duns: 'D-U-N-S Verified'
-      },
-      offer_b: {
-        title: loop.node_b?.offering_summary ?? 'Offer B',
-        offering: loop.node_b?.offering_summary ?? 'Offer B',
-        looking_for: loop.node_b?.looking_for_summary ?? 'Need B',
-        value: loop.node_b?.estimated_value ?? 0,
-        company: loop.node_b?.company_name ?? 'Company B',
-        verified: true,
-        duns: 'D-U-N-S Verified'
-      }
-    });
-
-    setActiveDealId(loop.loop_id || 'loop-demo');
   };
 
   const runDirectTwoWayDemo = () => {
@@ -363,6 +355,8 @@ export default function MasterDashboardPage() {
         value: DEMO_PRESET_OFFERS[0]?.estimated_value ?? 8500,
         company: DEMO_PRESET_OFFERS[0]?.company_name ?? 'Easy Mondays Apparel',
         verified: true,
+        skills: ['Apparel Supply', 'Overstock Merchandise'],
+        portfolioUrl: 'https://easymondays.com',
         duns: 'D-U-N-S #8849201'
       },
       offer_b: {
@@ -372,6 +366,8 @@ export default function MasterDashboardPage() {
         value: DEMO_PRESET_OFFERS[1]?.estimated_value ?? 5000,
         company: DEMO_PRESET_OFFERS[1]?.company_name ?? 'Montreal Creative Studios',
         verified: true,
+        skills: ['4K Camera Operations', 'Editing', 'Motion Design'],
+        portfolioUrl: 'https://vimeo.com',
         duns: 'D-U-N-S #9930214'
       }
     });
@@ -383,14 +379,7 @@ export default function MasterDashboardPage() {
   };
 
   const runThreeWayLoopDemo = () => {
-    handleInitiateCircularLoop({
-      loop_id: 'loop-demo-3way-investor',
-      parity_score: 98,
-      total_liquidity_unlocked: 18500,
-      node_a: DEMO_PRESET_OFFERS[0],
-      node_b: DEMO_PRESET_OFFERS[1],
-      node_c: DEMO_PRESET_OFFERS[2],
-    });
+    setActiveDealId('demo-2way-swap');
   };
 
   const runAiNegotiatorDemo = () => {
@@ -400,7 +389,6 @@ export default function MasterDashboardPage() {
     }, 300);
   };
 
-  // FEATURE 2: QUICKBOOKS / XERO AUDIT CSV EXPORT SIMULATOR
   const handleExportQuickBooksCsv = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
       + "Transaction_ID,Date,Party_A,Party_B,FMV_CAD,GST_HST_5,Net_Cash_Outlay,Status\n"
@@ -409,7 +397,7 @@ export default function MasterDashboardPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `TRADEIT_TAX_LEDGER_${deal.id}.csv`);
+    link.setAttribute("download", `TRADEIT_SMB_TAX_STATEMENT_${deal.id}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -440,7 +428,7 @@ export default function MasterDashboardPage() {
           </div>
           <div>
             <h1 className="font-bold text-base tracking-wide flex items-center gap-2">
-              TRADEIT <span className="text-xs font-mono px-2.5 py-0.5 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full">B2B NETWORK</span>
+              TRADEIT <span className="text-xs font-mono px-2.5 py-0.5 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full">SMB & FREELANCER NETWORK</span>
             </h1>
             <p className="text-[11px] opacity-80 font-mono hidden sm:block">tradeit.tv • Reciprocal Trade Platform</p>
           </div>
@@ -452,6 +440,12 @@ export default function MasterDashboardPage() {
         </div>
 
         <div className="flex items-center space-x-3">
+          {/* BARTER WALLET BADGE */}
+          <div className="hidden md:flex items-center gap-2 bg-[#2d404b] border border-yellow-200/30 px-3.5 py-1.5 rounded-full text-xs font-mono">
+            <Wallet className="w-3.5 h-3.5 text-yellow-200" />
+            <span>Barter Wallet: <strong className="text-yellow-200">${smbTradeCredits.toLocaleString()} TC</strong></span>
+          </div>
+
           <button
             onClick={() => setIsCmdKOpen(true)}
             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer"
@@ -505,7 +499,7 @@ export default function MasterDashboardPage() {
             className="bg-white text-[#334652] hover:bg-slate-100 font-bold text-xs px-5 h-9 rounded-full shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
           >
             <PlusCircle className="w-4 h-4 text-[#334652]" />
-            <span>Post Offer & Need</span>
+            <span>Post Skill or Need</span>
           </Button>
         </div>
       </header>
@@ -513,19 +507,19 @@ export default function MasterDashboardPage() {
       {/* MAIN STAGE */}
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 space-y-8 relative print:hidden">
         
-        {/* 1. HERO WELCOME CARD */}
+        {/* HERO CARD */}
         <section className="rounded-3xl border border-white/15 bg-[#3e5562]/80 p-6 sm:p-8 backdrop-blur-md shadow-lg space-y-4 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-200/10 border border-yellow-200/30 rounded-full text-xs font-medium text-yellow-200">
-                <BadgeCheck className="w-3.5 h-3.5 text-yellow-200" />
-                <span>Enterprise Verified • Zero Cash Outlay B2B Exchange</span>
+                <Briefcase className="w-3.5 h-3.5 text-yellow-200" />
+                <span>Freelancer & SMB Network • Preserve Cash Flow via Service Barter</span>
               </div>
               <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight text-white">
-                Unlock Value in Surplus Inventory & Service Capacity
+                Trade Skills, Services & Inventory Without Cash Outlay
               </h2>
               <p className="opacity-90 text-xs sm:text-sm leading-relaxed text-slate-200">
-                Trade directly with verified business partners. Execute 2-of-2 multi-sig agreements backed by real-time AI negotiation and Solana PDA escrow vaults.
+                Connect with verified local businesses and freelancers. Trade web design, video production, legal advice, or office space secured by Solana 2-of-2 milestone escrow.
               </p>
             </div>
 
@@ -539,21 +533,21 @@ export default function MasterDashboardPage() {
           </div>
         </section>
 
-        {/* 2. FEATURE 3: CORPORATE REVERSE RFQ NEEDS BOARD */}
+        {/* CORPORATE & SMB REVERSE RFQ BOARD */}
         <section className="rounded-3xl border border-white/15 bg-[#394f5c] p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-yellow-200/10 rounded-2xl border border-yellow-200/30">
-                <MegaPhone className="w-6 h-6 text-yellow-200" />
+                <Megaphone className="w-6 h-6 text-yellow-200" />
               </div>
               <div>
                 <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
-                  Corporate Reverse RFQ Board (Active Shortages)
+                  Active Client Shortages & Project RFQs
                   <span className="text-[10px] bg-yellow-200/20 text-yellow-200 px-2.5 py-0.5 rounded-full border border-yellow-200/30 font-mono">
-                    DEMAND BOARD
+                    FREELANCER OPPORTUNITIES
                   </span>
                 </h3>
-                <p className="text-xs text-slate-200/80">Browse active corporate operational needs and bid spare capacity or inventory to settle via reciprocal trade.</p>
+                <p className="text-xs text-slate-200/80">Businesses seeking freelance skills and SMB services in exchange for their goods or trade credits.</p>
               </div>
             </div>
 
@@ -562,7 +556,7 @@ export default function MasterDashboardPage() {
               size="sm"
               className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs rounded-full cursor-pointer"
             >
-              + Post Corporate Need
+              + Post Service Requirement
             </Button>
           </div>
 
@@ -573,7 +567,7 @@ export default function MasterDashboardPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-emerald-300 uppercase font-mono">{rfq.company}</span>
                     <span className="text-[9px] bg-yellow-200/10 text-yellow-200 border border-yellow-200/30 px-2 py-0.5 rounded-full font-mono">
-                      Target: ${rfq.targetFmv.toLocaleString()} CAD
+                      Valuation: ${rfq.targetFmv.toLocaleString()} CAD
                     </span>
                   </div>
                   <h4 className="font-extrabold text-sm text-white line-clamp-2">{rfq.title}</h4>
@@ -586,163 +580,22 @@ export default function MasterDashboardPage() {
                   onClick={() => handleBidOnRfqNeed(rfq)}
                   className="w-full bg-white hover:bg-slate-100 text-[#334652] font-bold text-xs py-2.5 rounded-full flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
                 >
-                  <span>Bid Spare Capacity / Goods</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span>Bid Service Capacity / Hours</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
           </div>
         </section>
 
-        {/* 3. RWA TOKENIZATION STUDIO */}
-        <section className="rounded-3xl border border-white/15 bg-[#3b505d]/90 p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-yellow-200/10 rounded-2xl border border-yellow-200/30">
-                <Coins className="w-6 h-6 text-yellow-200" />
-              </div>
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-100 flex items-center gap-2">
-                  Institutional RWA Tokenization & Provenance Studio
-                  <span className="text-[10px] bg-yellow-200/20 text-yellow-200 px-2.5 py-0.5 rounded-full border border-yellow-200/30 font-mono">
-                    TOKEN-2022
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-200/80">Convert physical commercial assets into compliant Solana Token-2022 SPL assets with on-chain document hashes.</p>
-              </div>
-            </div>
-            <span className="rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs text-slate-200 font-mono">
-              Program ID: Es7dux19...ERi
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            <div className="lg:col-span-7 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Asset Class Category</label>
-                  <select
-                    value={rwaCategory}
-                    onChange={(e) => setRwaCategory(e.target.value)}
-                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs text-slate-100 focus:outline-none focus:border-white"
-                  >
-                    <option value="Commercial Invoice">Commercial Invoice (#INV-8849)</option>
-                    <option value="Freight Cargo Container">Freight Cargo Container (Electronics)</option>
-                    <option value="Agricultural Commodity">Agricultural Commodity (Coffee)</option>
-                    <option value="Industrial Equipment">Heavy Machinery & Fleet Equipment</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Appraised Valuation ($ USD)</label>
-                  <input
-                    type="number"
-                    value={rwaValuation}
-                    onChange={(e) => setRwaValuation(Number(e.target.value))}
-                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs font-mono text-slate-100 focus:outline-none focus:border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Verified Legal Document PDF</label>
-                  <div className="flex items-center gap-2 bg-[#2d404b] border border-white/20 rounded-2xl p-2.5 text-xs">
-                    <FileCheck className="w-4 h-4 text-yellow-200" />
-                    <input
-                      type="text"
-                      value={rwaDocName}
-                      onChange={(e) => setRwaDocName(e.target.value)}
-                      className="bg-transparent text-slate-200 focus:outline-none text-xs w-full font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Fractional SPL Token Shares</label>
-                  <input
-                    type="number"
-                    value={fractionalShares}
-                    onChange={(e) => setFractionalShares(Number(e.target.value))}
-                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs font-mono text-slate-100 focus:outline-none focus:border-white"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 bg-[#2d404b] border border-white/15 rounded-2xl text-xs">
-                <div className="flex items-center gap-2.5">
-                  <KeyRound className="w-4 h-4 text-yellow-200" />
-                  <div>
-                    <span className="font-bold text-slate-100 block">Enforce Token-2022 Compliance Transfer Hooks</span>
-                    <span className="text-[10px] text-slate-300/80">Requires 2-of-2 multi-sig approval before token transfers on-chain.</span>
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={enableToken2022Compliance}
-                  onChange={(e) => setEnableToken2022Compliance(e.target.checked)}
-                  className="w-4 h-4 accent-yellow-200 rounded cursor-pointer"
-                />
-              </div>
-
-              <button
-                onClick={executeRwaMinting}
-                disabled={rwaMintStage !== 'idle' && rwaMintStage !== 'complete'}
-                className="w-full rounded-full bg-white hover:bg-slate-100 p-3.5 text-xs font-bold text-[#334652] transition-all shadow-md disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
-              >
-                {rwaMintStage === 'verifying_doc' && <><Loader2 className="w-4 h-4 animate-spin text-[#334652]" /> <span>Step 1/2: Hashing Physical PDF Document...</span></>}
-                {rwaMintStage === 'minting_spl' && <><Loader2 className="w-4 h-4 animate-spin text-[#334652]" /> <span>Step 2/2: Minting Token-2022 Asset on Solana...</span></>}
-                {(rwaMintStage === 'idle' || rwaMintStage === 'complete') && <><span>⚡ Mint Compliant RWA Asset Token on Solana Devnet</span></>}
-              </button>
-            </div>
-
-            <div className="lg:col-span-5 rounded-2xl border border-white/15 bg-[#2d404b] p-5 space-y-4 font-mono text-xs">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <span className="text-slate-300 uppercase tracking-wider text-[10px]">On-Chain Provenance Record</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] ${tokenizedRwaOutput ? "bg-emerald-900/60 text-emerald-200 border border-emerald-400/30" : "bg-white/10 text-slate-300"}`}>
-                  {tokenizedRwaOutput ? "MINTED ON-CHAIN" : "AWAITING MINT"}
-                </span>
-              </div>
-
-              {tokenizedRwaOutput ? (
-                <div className="space-y-2.5 text-slate-200">
-                  <div className="flex justify-between"><span className="text-slate-400">Asset Category:</span> <span>{tokenizedRwaOutput.category}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">SPL Mint Address:</span> <span className="text-yellow-200 font-bold">{tokenizedRwaOutput.mintAddress}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Appraised Value:</span> <span className="text-emerald-300">${tokenizedRwaOutput.valuation.toLocaleString()} USD</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Fractional Shares:</span> <span>{tokenizedRwaOutput.shares} (${tokenizedRwaOutput.sharePrice} / share)</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Document Hash:</span> <span className="text-slate-300 text-[10px]">{tokenizedRwaOutput.docHash}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Token Standard:</span> <span className="text-sky-200 font-bold">{tokenizedRwaOutput.tokenStandard}</span></div>
-                  
-                  <div className="pt-3 border-t border-white/10 text-[11px] text-emerald-200 space-y-1">
-                    <p>✓ Asset verified and ready for 2-of-2 Escrow Staking</p>
-                    <a href={`https://explorer.solana.com/?cluster=devnet`} target="_blank" rel="noreferrer" className="text-yellow-200 underline block text-[10px]">
-                      View Token Mint on Solana Explorer ↗
-                    </a>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-10 text-center text-slate-300 space-y-2 font-sans">
-                  <Coins className="w-8 h-8 text-yellow-200 mx-auto opacity-70" />
-                  <p className="text-xs">Configure your RWA parameters and click mint to generate a Token-2022 compliant asset on Solana Devnet.</p>
-                </div>
-              )}
-            </div>
-
-          </div>
-        </section>
-
-        {/* 4. DEMO CONTROLLER */}
+        {/* DEMO CONTROLLER */}
         <DemoStoryController 
           onRunTwoWayDemo={runDirectTwoWayDemo}
           onRunThreeWayDemo={runThreeWayLoopDemo}
           onRunAiNegotiatorDemo={runAiNegotiatorDemo}
         />
 
-        {/* 5. 3-WAY CIRCULAR LOOP BANNER */}
-        <CircularLoopBanner loops={[]} onInitiateLoop={handleInitiateCircularLoop} />
-
-        {/* 6. B2B STAGE & DEAL ROOM GRID */}
+        {/* B2B STAGE & DEAL ROOM GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           <div className={`${activeDealId ? 'lg:col-span-6' : 'lg:col-span-12'} transition-all duration-300`}>
@@ -756,7 +609,7 @@ export default function MasterDashboardPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <ArrowLeftRight className="w-5 h-5 text-slate-100" />
-                    <h3 className="font-extrabold text-white text-sm">AUTONOMOUS DEAL ROOM</h3>
+                    <h3 className="font-extrabold text-white text-sm">AUTONOMOUS DEAL ROOM & SOW</h3>
                   </div>
                   <p className="text-[11px] text-slate-200/80 font-mono mt-0.5">2-of-2 Multi-Sig Escrow Engine</p>
                 </div>
@@ -771,58 +624,96 @@ export default function MasterDashboardPage() {
                 </button>
               </div>
 
-              {/* SIDE-BY-SIDE OFFERS */}
+              {/* SIDE-BY-SIDE OFFERS WITH FREELANCER SKILL BADGES */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div 
                   onClick={() => setSelectedCompanyProfile(deal?.offer_a?.company ?? null)}
-                  className="bg-[#2d404b] p-3.5 rounded-2xl border border-white/10 space-y-1 hover:border-white/30 cursor-pointer transition-all"
+                  className="bg-[#2d404b] p-3.5 rounded-2xl border border-white/10 space-y-2 hover:border-white/30 cursor-pointer transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold text-emerald-300 uppercase">{deal?.offer_a?.company ?? 'Party A'} ↗</p>
                     <span className="text-[9px] bg-emerald-900/60 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.5 rounded font-mono">
-                      ✓ D&B Checked
+                      ✓ Verified
                     </span>
                   </div>
                   <p className="font-bold text-white line-clamp-1">{deal?.offer_a?.title ?? 'Offer A'}</p>
+                  
+                  {/* Skill Badges */}
+                  <div className="flex flex-wrap gap-1">
+                    {deal.offer_a.skills.map((skill, sIdx) => (
+                      <span key={sIdx} className="text-[9px] bg-white/10 text-slate-200 px-2 py-0.5 rounded-full border border-white/10 font-mono">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+
                   <p className="text-slate-300 font-mono text-[10px]">${(deal?.offer_a?.value ?? 0).toLocaleString()} CAD Value</p>
                 </div>
 
                 <div 
                   onClick={() => setSelectedCompanyProfile(deal?.offer_b?.company ?? null)}
-                  className="bg-[#2d404b] p-3.5 rounded-2xl border border-white/10 space-y-1 hover:border-white/30 cursor-pointer transition-all"
+                  className="bg-[#2d404b] p-3.5 rounded-2xl border border-white/10 space-y-2 hover:border-white/30 cursor-pointer transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold text-sky-300 uppercase">{deal?.offer_b?.company ?? 'Party B'} ↗</p>
                     <span className="text-[9px] bg-emerald-900/60 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.5 rounded font-mono">
-                      ✓ D&B Checked
+                      ✓ Verified
                     </span>
                   </div>
                   <p className="font-bold text-white line-clamp-1">{deal?.offer_b?.title ?? 'Offer B'}</p>
+                  
+                  {/* Skill Badges */}
+                  <div className="flex flex-wrap gap-1">
+                    {deal.offer_b.skills.map((skill, sIdx) => (
+                      <span key={sIdx} className="text-[9px] bg-white/10 text-slate-200 px-2 py-0.5 rounded-full border border-white/10 font-mono">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+
                   <p className="text-slate-300 font-mono text-[10px]">${(deal?.offer_b?.value ?? 0).toLocaleString()} CAD Value</p>
                 </div>
               </div>
 
-              {/* DELTA CLEARING INDICATOR */}
-              {tradeDelta > 0 && (
-                <div className="bg-[#273842] border border-yellow-200/30 rounded-2xl p-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <Scale className="w-4 h-4 text-yellow-200" />
-                    <div>
-                      <span className="font-bold text-white block text-[11px]">Trade Delta Clearing Buffer</span>
-                      <span className="text-[10px] text-slate-300">
-                        ${tradeDelta.toLocaleString()} CAD difference issued as Trade Credits to <strong>{deltaReceiver}</strong>
-                      </span>
-                    </div>
+              {/* FREELANCER SOW MILESTONE BUILDER */}
+              <div className="bg-[#273842] border border-white/15 rounded-2xl p-4 space-y-3 text-xs">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-yellow-200" />
+                    <h4 className="font-bold text-white">Freelancer Scope-of-Work (SOW) Milestones</h4>
                   </div>
-                  <span className="text-[10px] bg-yellow-200/20 text-yellow-200 border border-yellow-200/30 font-mono font-bold px-2 py-1 rounded-full">
-                    No Cash Outlay
-                  </span>
+                  <span className="text-[10px] text-slate-300 font-mono">Incremental Escrow Release</span>
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  {sowMilestones.map((milestone) => (
+                    <div 
+                      key={milestone.id}
+                      onClick={() => toggleSowMilestone(milestone.id)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                        milestone.completed 
+                          ? 'bg-emerald-950/50 border-emerald-400/40 text-emerald-200' 
+                          : 'bg-[#2d404b] border-white/10 text-slate-200 hover:border-white/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox" 
+                          checked={milestone.completed} 
+                          onChange={() => {}} 
+                          className="rounded accent-emerald-400"
+                        />
+                        <span className="font-medium text-[11px]">{milestone.title}</span>
+                      </div>
+                      <span className="font-mono text-[10px] font-bold">{milestone.percent}% Release</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* REALTIME CHAT */}
-              <div className="flex-1 bg-[#2d404b] border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[200px]">
-                <div className="space-y-3 overflow-y-auto max-h-[150px] hide-scrollbar">
+              <div className="flex-1 bg-[#2d404b] border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[180px]">
+                <div className="space-y-3 overflow-y-auto max-h-[140px] hide-scrollbar">
                   {messages.map((msg, i) => (
                     <div key={i} className={`flex flex-col ${msg.sender === (currentUser || 'You') ? 'items-end' : 'items-start'}`}>
                       <span className="text-[9px] text-slate-300 mb-0.5">{msg.sender}</span>
@@ -853,9 +744,6 @@ export default function MasterDashboardPage() {
                 </form>
               </div>
 
-              {/* DELIVERABLE TRACKER */}
-              <EscrowMilestoneTracker dealId={deal.id} />
-
               {/* SIGNING AREA */}
               <div className="pt-2 border-t border-white/10 space-y-3">
                 <div className="flex items-center justify-between">
@@ -883,7 +771,7 @@ export default function MasterDashboardPage() {
                     className="w-full bg-[#2d404b] hover:bg-[#344854] border border-emerald-400/40 text-emerald-200 font-bold text-xs py-2 rounded-full flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    <span>View & Export Executed B2B Contract (PDF & Tax Ledger)</span>
+                    <span>View & Export Executed SOW & Tax Statement (PDF)</span>
                   </button>
                 )}
               </div>
@@ -893,7 +781,7 @@ export default function MasterDashboardPage() {
 
         </div>
 
-        {/* 7. HOW IT WORKS */}
+        {/* HOW IT WORKS */}
         <HowItWorksSection />
 
       </main>
@@ -901,7 +789,7 @@ export default function MasterDashboardPage() {
       {/* FOOTER */}
       <footer className="border-t border-white/10 bg-[#425965] py-6 px-6 mt-12 text-xs opacity-90 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <span className="font-bold">TradeIt B2B</span> • Reciprocal Trade & Tokenized Asset Engine
+          <span className="font-bold">TradeIt SMB & Freelancers</span> • Reciprocal Trade Network
         </div>
         <div className="flex gap-6 font-medium">
           <Link href="/escrow" className="hover:opacity-100 transition-all">Escrow Terminal</Link>
@@ -919,7 +807,7 @@ export default function MasterDashboardPage() {
               <input
                 type="text"
                 autoFocus
-                placeholder="Type a command or search deals..."
+                placeholder="Type a command or search skills..."
                 value={cmdSearchQuery}
                 onChange={(e) => setCmdSearchQuery(e.target.value)}
                 className="w-full bg-transparent text-sm focus:outline-none placeholder:text-slate-300/60"
@@ -947,17 +835,6 @@ export default function MasterDashboardPage() {
                 <span>🔒 Open Solana Escrow Terminal</span>
                 <ArrowRight className="w-3.5 h-3.5 opacity-60" />
               </Link>
-
-              <button
-                onClick={() => {
-                  window.scrollTo({ top: 400, behavior: 'smooth' });
-                  setIsCmdKOpen(false);
-                }}
-                className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center justify-between transition-all"
-              >
-                <span>⚡ Jump to RWA Tokenization Studio</span>
-                <ArrowRight className="w-3.5 h-3.5 opacity-60" />
-              </button>
             </div>
           </div>
         </div>
@@ -1013,7 +890,7 @@ export default function MasterDashboardPage() {
         onClose={() => setSelectedCompanyProfile(null)}
       />
 
-      {/* FEATURE 2: PRINTABLE CONTRACT VAULT MODAL WITH TAX & FMV AUDIT LEDGER */}
+      {/* PRINTABLE CONTRACT VAULT MODAL WITH TAX STATEMENT */}
       {showContractModal && (
         <div className="fixed inset-0 z-50 bg-[#354854]/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-slate-900 border border-slate-300 w-full max-w-2xl rounded-3xl p-8 space-y-6 relative shadow-2xl my-auto print:p-0 print:border-none print:shadow-none">
@@ -1021,14 +898,14 @@ export default function MasterDashboardPage() {
             <div className="flex items-center justify-between border-b pb-4 border-slate-200 print:hidden">
               <div className="flex items-center gap-2">
                 <Receipt className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-sm font-black text-slate-900 uppercase">EXECUTED B2B CONTRACT & TAX LEDGER</h3>
+                <h3 className="text-sm font-black text-slate-900 uppercase">EXECUTED FREELANCER SOW & TAX RECEIPT</h3>
               </div>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={handleExportQuickBooksCsv}
                   className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-full flex items-center gap-1.5 cursor-pointer"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV (QuickBooks/Xero)
+                  <FileSpreadsheet className="w-3.5 h-3.5" /> Export Tax CSV
                 </button>
                 <button 
                   onClick={() => window.print()}
@@ -1049,7 +926,7 @@ export default function MasterDashboardPage() {
             <div className="space-y-4 text-xs font-serif leading-relaxed">
               <div className="flex justify-between items-start border-b pb-3">
                 <div>
-                  <h2 className="text-lg font-black tracking-tight font-sans">TRADEIT B2B BARTER & TAX INVOICE</h2>
+                  <h2 className="text-lg font-black tracking-tight font-sans">TRADEIT FREELANCER SOW & TAX RECEIPT</h2>
                   <p className="text-[10px] text-slate-500 font-mono">Contract ID: {deal?.id} • Program ID: Es7dux19...ERi</p>
                 </div>
                 <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-full font-sans">
@@ -1059,35 +936,33 @@ export default function MasterDashboardPage() {
 
               <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 font-sans">
                 <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold">Party A (Supplier)</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">Party A (Freelancer / Studio)</p>
                   <p className="font-extrabold text-slate-900">{deal?.offer_a?.company}</p>
                   <p className="text-[11px] text-slate-600">{deal?.offer_a?.offering}</p>
-                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal?.offer_a?.value} CAD Fair Market Value</p>
+                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal?.offer_a?.value} CAD Valuation</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold">Party B (Supplier)</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">Party B (Client / SMB)</p>
                   <p className="font-extrabold text-slate-900">{deal?.offer_b?.company}</p>
                   <p className="text-[11px] text-slate-600">{deal?.offer_b?.offering}</p>
-                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal?.offer_b?.value} CAD Fair Market Value</p>
+                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal?.offer_b?.value} CAD Valuation</p>
                 </div>
               </div>
 
-              {/* FEATURE 2: TAX & FMV AUDIT LEDGER */}
+              {/* TAX STATEMENT SUMMARY */}
               <div className="bg-slate-100 p-4 rounded-2xl border border-slate-300 font-sans space-y-2">
                 <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
                   <Calculator className="w-4 h-4 text-slate-700" />
-                  <span>CRA / IRS Fair Market Value (FMV) & Sales Tax Audit Breakdown</span>
+                  <span>Sole Proprietor & SMB Non-Cash Tax Record</span>
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-[11px] text-slate-700 font-mono">
                   <div>
-                    <p>Subtotal FMV: <strong>${offerAVal.toLocaleString()} CAD</strong></p>
-                    <p>Estimated GST/HST (5%): <strong>${(offerAVal * 0.05).toFixed(2)} CAD</strong></p>
-                    <p>Estimated QST/PST (9.975%): <strong>${(offerAVal * 0.09975).toFixed(2)} CAD</strong></p>
+                    <p>Gross Barter Revenue: <strong>${offerAVal.toLocaleString()} CAD</strong></p>
+                    <p>GST/HST Collected (5%): <strong>${(offerAVal * 0.05).toFixed(2)} CAD</strong></p>
                   </div>
                   <div>
-                    <p>Trade Delta Settled: <strong>${tradeDelta.toLocaleString()} Trade Credits</strong></p>
-                    <p>Net Cash Consideration: <strong>$0.00 CAD</strong></p>
-                    <p>Audit Status: <strong className="text-emerald-700">Non-Cash Asset Exchange Verified ✓</strong></p>
+                    <p>Tax Filing Category: <strong>Non-Cash Business Income (T2125/Sch C)</strong></p>
+                    <p>Net Cash Exchanged: <strong>$0.00 CAD</strong></p>
                   </div>
                 </div>
               </div>
