@@ -5,8 +5,25 @@ const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
 export async function POST(req: Request) {
   try {
+    // 1. Verify Authorization Header
+    const expectedSecret = process.env.WEBHOOK_SECRET;
+    const incomingSecret =
+      req.headers.get("x-webhook-secret") ||
+      req.headers.get("authorization");
+
+    if (
+      expectedSecret &&
+      incomingSecret !== expectedSecret &&
+      incomingSecret !== `Bearer ${expectedSecret}`
+    ) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid or missing webhook secret header" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
-    
+
     // Supabase Database Webhook Payload
     const record = body?.record || body?.new;
     const eventType = record?.event_type || record?.status;
@@ -14,14 +31,17 @@ export async function POST(req: Request) {
     const txSignature = record?.tx_signature || "";
 
     if (!dealId || !eventType) {
-      return NextResponse.json({ message: "Payload missing required deal parameters" }, { status: 200 });
+      return NextResponse.json(
+        { message: "Payload missing required deal parameters" },
+        { status: 200 }
+      );
     }
 
-    // 1. Vault Funded Alert
+    // 2. Vault Funded Alert
     if (eventType === "DEPOSIT" || eventType === "ESCROW_FUNDED") {
       await resend.emails.send({
         from: "TradeIt B2B Escrow ",
-        to: ["notifications@tradeit.com"], // Swap with dynamic target or user email
+        to: ["notifications@tradeit.com"],
         subject: `🔒 Escrow Vault Funded: ${dealId}`,
         html: `
           
@@ -37,7 +57,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2. Settlement Alert
+    // 3. Settlement Alert
     if (eventType === "SETTLEMENT" || eventType === "SETTLED") {
       await resend.emails.send({
         from: "TradeIt B2B Escrow ",
