@@ -43,7 +43,7 @@ export function useTradeItEscrow() {
   }, [wallet]);
 
   /**
-   * 0. Mock RWA Faucet: Creates a new SPL Token Mint & Mints tokens to Wallet ATA in 1 Tx
+   * 0. Mock RWA Faucet: Creates SPL Token Mint & Mints tokens to Wallet ATA
    */
   const mintMockRwaTokens = useCallback(
     async (amountToMint = 1_000): Promise<{ mintAddress: string; txSignature: string }> => {
@@ -63,7 +63,6 @@ export function useTradeItEscrow() {
         );
 
         const tx = new Transaction().add(
-          // Create Mint Account
           SystemProgram.createAccount({
             fromPubkey: wallet.publicKey,
             newAccountPubkey: mintKeypair.publicKey,
@@ -71,21 +70,18 @@ export function useTradeItEscrow() {
             lamports,
             programId: TOKEN_PROGRAM_ID,
           }),
-          // Initialize Mint (6 decimals)
           createInitializeMintInstruction(
             mintKeypair.publicKey,
             decimals,
             wallet.publicKey,
             wallet.publicKey
           ),
-          // Create Associated Token Account for Wallet
           createAssociatedTokenAccountInstruction(
             wallet.publicKey,
             userAta,
             wallet.publicKey,
             mintKeypair.publicKey
           ),
-          // Mint tokens directly into user ATA
           createMintToInstruction(
             mintKeypair.publicKey,
             userAta,
@@ -94,11 +90,9 @@ export function useTradeItEscrow() {
           )
         );
 
-        // Fetch latest blockhash and sign
         tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         tx.feePayer = wallet.publicKey;
 
-        // Sign with ephemeral mint keypair first, then request wallet signature
         tx.partialSign(mintKeypair);
         const signedTx = await wallet.signTransaction(tx);
         const txSig = await connection.sendRawTransaction(signedTx.serialize());
@@ -164,7 +158,7 @@ export function useTradeItEscrow() {
   );
 
   /**
-   * 2. Deposit RWA Token + Log to Supabase
+   * 2. Deposit RWA Token + Auto-Create Vault ATA + Log to Supabase
    */
   const depositToken = useCallback(
     async (dealId: string, mint: PublicKey, amount: number | BN): Promise<string> => {
@@ -178,7 +172,23 @@ export function useTradeItEscrow() {
         const depositorAta = getAssociatedTokenAddressSync(mint, wallet!.publicKey);
         const vaultAta = getAssociatedTokenAddressSync(mint, escrowPda, true);
 
-        const tx = await program.methods
+        const transaction = new Transaction();
+
+        // Check if Vault ATA exists; if not, add instruction to create it
+        const vaultAtaInfo = await connection.getAccountInfo(vaultAta);
+        if (!vaultAtaInfo) {
+          transaction.add(
+            createAssociatedTokenAccountInstruction(
+              wallet!.publicKey,
+              vaultAta,
+              escrowPda,
+              mint
+            )
+          );
+        }
+
+        // Add Deposit Instruction
+        const depositIx = await program.methods
           .depositRwaToken(amountBN)
           .accounts({
             depositor: wallet!.publicKey,
@@ -187,18 +197,27 @@ export function useTradeItEscrow() {
             escrowAccount: escrowPda,
             tokenProgram: TOKEN_PROGRAM_ID,
           })
-          .rpc();
+          .instruction();
+
+        transaction.add(depositIx);
+
+        transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        transaction.feePayer = wallet!.publicKey;
+
+        const signedTx = await wallet!.signTransaction(transaction);
+        const txSig = await connection.sendRawTransaction(signedTx.serialize());
+        await connection.confirmTransaction(txSig, "confirmed");
 
         await logDealTransaction({
           dealId,
           eventType: "DEPOSIT",
-          txSignature: tx,
+          txSignature: txSig,
           walletAddress: wallet!.publicKey.toBase58(),
           mintAddress: mint.toBase58(),
           amount: amountBN.toNumber(),
         });
 
-        return tx;
+        return txSig;
       } catch (err: any) {
         const msg = err.message || "Failed to deposit token.";
         setError(msg);
@@ -207,11 +226,11 @@ export function useTradeItEscrow() {
         setLoading(false);
       }
     },
-    [getProgram, wallet]
+    [connection, getProgram, wallet]
   );
 
   /**
-   * 3. Execute Atomic Settlement + Log to Supabase
+   * 3. Execute Atomic Settlement + Auto-Create Recipient ATA + Log to Supabase
    */
   const executeSettlement = useCallback(
     async (
@@ -230,7 +249,22 @@ export function useTradeItEscrow() {
         const vaultAta = getAssociatedTokenAddressSync(mint, escrowPda, true);
         const recipientAta = getAssociatedTokenAddressSync(mint, recipientPublicKey);
 
-        const tx = await program.methods
+        const transaction = new Transaction();
+
+        // Check if Recipient ATA exists; if not, add instruction to create it
+        const recipientAtaInfo = await connection.getAccountInfo(recipientAta);
+        if (!recipientAtaInfo) {
+          transaction.add(
+            createAssociatedTokenAccountInstruction(
+              wallet!.publicKey,
+              recipientAta,
+              recipientPublicKey,
+              mint
+            )
+          );
+        }
+
+        const settleIx = await program.methods
           .executeAtomicRingSettlement(amountBN)
           .accounts({
             escrowAccount: escrowPda,
@@ -239,19 +273,28 @@ export function useTradeItEscrow() {
             initializer: wallet!.publicKey,
             tokenProgram: TOKEN_PROGRAM_ID,
           })
-          .rpc();
+          .instruction();
+
+        transaction.add(settleIx);
+
+        transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        transaction.feePayer = wallet!.publicKey;
+
+        const signedTx = await wallet!.signTransaction(transaction);
+        const txSig = await connection.sendRawTransaction(signedTx.serialize());
+        await connection.confirmTransaction(txSig, "confirmed");
 
         await logDealTransaction({
           dealId,
           eventType: "SETTLEMENT",
-          txSignature: tx,
+          txSignature: txSig,
           walletAddress: wallet!.publicKey.toBase58(),
           mintAddress: mint.toBase58(),
           recipientAddress: recipientPublicKey.toBase58(),
           amount: amountBN.toNumber(),
         });
 
-        return tx;
+        return txSig;
       } catch (err: any) {
         const msg = err.message || "Failed to execute atomic settlement.";
         setError(msg);
@@ -260,7 +303,7 @@ export function useTradeItEscrow() {
         setLoading(false);
       }
     },
-    [getProgram, wallet]
+    [connection, getProgram, wallet]
   );
 
   /**
