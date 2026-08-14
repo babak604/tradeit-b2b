@@ -1,33 +1,96 @@
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 
-export interface LogDealEventParams {
+// Initialize client with environment variables or fallback
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export interface DealHistoryRecord {
+  id: string;
+  deal_id: string;
+  event_type: string;
+  tx_signature: string;
+  wallet_address: string;
+  mint_address?: string;
+  recipient_address?: string;
+  amount?: number;
+  created_at?: string;
+}
+
+/**
+ * Fetch past deal transaction records from Supabase
+ */
+export async function fetchDealHistory(): Promise<DealHistoryRecord[]> {
+  try {
+    const { data, error } = await supabase
+      .from("deal_history")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching deal history from Supabase:", error.message);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error("Unexpected error fetching deal history:", err);
+    return [];
+  }
+}
+
+/**
+ * Subscribe to real-time inserts on the deal_history table
+ */
+export function subscribeToDealHistory(callback: (record: DealHistoryRecord) => void) {
+  const channel = supabase
+    .channel("public:deal_history")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "deal_history" },
+      (payload) => {
+        callback(payload.new as DealHistoryRecord);
+      }
+    )
+    .subscribe();
+
+  return {
+    unsubscribe: () => {
+      supabase.removeChannel(channel);
+    },
+  };
+}
+
+/**
+ * Log a new transaction event to Supabase
+ */
+export async function logDealTransaction(payload: {
   dealId: string;
-  eventType: "INITIALIZE" | "DEPOSIT" | "SETTLEMENT";
+  eventType: string;
   txSignature: string;
   walletAddress: string;
   mintAddress?: string;
-  amount?: number;
   recipientAddress?: string;
-}
+  amount?: number;
+}) {
+  try {
+    const { error } = await supabase.from("deal_history").insert([
+      {
+        deal_id: payload.dealId,
+        event_type: payload.eventType,
+        tx_signature: payload.txSignature,
+        wallet_address: payload.walletAddress,
+        mint_address: payload.mintAddress,
+        recipient_address: payload.recipientAddress,
+        amount: payload.amount,
+      },
+    ]);
 
-export async function logDealTransaction(params: LogDealEventParams) {
-  const supabase = createClient();
-
-  const { data, error } = await supabase.from("deal_history").insert({
-    deal_id: params.dealId,
-    event_type: params.eventType,
-    tx_signature: params.txSignature,
-    wallet_address: params.walletAddress,
-    mint_address: params.mintAddress,
-    amount: params.amount,
-    recipient_address: params.recipientAddress,
-  });
-
-  if (error) {
-    console.error("❌ Failed to log deal history to Supabase:", error);
-    throw error;
+    if (error) {
+      console.error("Error logging deal transaction to Supabase:", error.message);
+    }
+  } catch (err) {
+    console.error("Unexpected error logging transaction:", err);
   }
-
-  console.log(`✅ Logged ${params.eventType} for deal ${params.dealId} in Supabase`);
-  return data;
 }
