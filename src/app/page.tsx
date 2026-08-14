@@ -5,12 +5,12 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase/client';
 import { DEMO_PRESET_OFFERS } from '@/lib/demo/demoSeedData';
+import { CircularLoopMatch } from '@/lib/matcher/circularTradeAgent';
 import { Button } from '@/components/ui/button';
 import { 
-  Tornado, ShieldCheck, 
-  Send, X, ArrowLeftRight, FileText, Download, UserCheck, LogIn, Bot, Loader2, Sparkles,
-  Coins, Search, ArrowRight, Scale, KeyRound, FileCheck,
-  Megaphone, FileSpreadsheet, Calculator, Briefcase, ExternalLink, Clock, Plus
+  Tornado, PlusCircle, ShieldCheck, 
+  Send, X, ArrowLeftRight, FileText, Download, CheckCircle2, UserCheck, LogIn, Bot, Loader2, Sparkles,
+  Coins, Search, Command, Activity, BadgeCheck, Check, ArrowRight, FileCheck, Layers, Lock, KeyRound
 } from 'lucide-react';
 
 // Dynamic Client Component Imports
@@ -26,17 +26,20 @@ const HowItWorksSection = dynamic(() => import('@/components/HowItWorksSection')
 export default function MasterDashboardPage() {
   const [mounted, setMounted] = useState(false);
 
-  // Modal & Drawer States
+  // Single-Page Modal & Drawer States
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
   const [selectedCompanyProfile, setSelectedCompanyProfile] = useState<string | null>(null);
 
-  // Command Palette & Stepper State
+  // Command Palette (Cmd + K) State
   const [isCmdKOpen, setIsCmdKOpen] = useState(false);
   const [cmdSearchQuery, setCmdSearchQuery] = useState('');
+
+  // Transaction Stepper Modal & Network Health
   const [txStep, setTxStep] = useState<number | null>(null);
+  const [networkPing, setNetworkPing] = useState<number>(312);
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Auth & Agent States
@@ -52,44 +55,6 @@ export default function MasterDashboardPage() {
   const [rwaMintStage, setRwaMintStage] = useState<'idle' | 'verifying_doc' | 'minting_spl' | 'complete'>('idle');
   const [tokenizedRwaOutput, setTokenizedRwaOutput] = useState<any>(null);
 
-  // SOW Milestones State
-  const [sowMilestones, setSowMilestones] = useState([
-    { id: 1, title: 'Scope & Brand Strategy', percent: 30, completed: true },
-    { id: 2, title: 'Initial Assets & V1 Draft', percent: 40, completed: false },
-    { id: 3, title: 'Final Handover & Source Files', percent: 30, completed: false },
-  ]);
-
-  // Reverse RFQ Needs State
-  const [rfqNeeds] = useState([
-    {
-      id: 'rfq-1',
-      company: 'LogiTrans Quebec',
-      title: '5,000 sq ft Commercial Warehouse Storage',
-      category: 'Logistics',
-      targetFmv: 15000,
-      offeringTrade: 'Intermodal Freight Capacity',
-      verifiedDuns: 'D-U-N-S #9921048'
-    },
-    {
-      id: 'rfq-2',
-      company: 'FinTech Nordics',
-      title: 'Cyber-Security & Penetration Audit',
-      category: 'IT Services',
-      targetFmv: 22000,
-      offeringTrade: 'SaaS API Integration',
-      verifiedDuns: 'D-U-N-S #8830192'
-    },
-    {
-      id: 'rfq-3',
-      company: 'Apex Hospitality',
-      title: '500 Branded Merchandise Sets',
-      category: 'Merchandise',
-      targetFmv: 12500,
-      offeringTrade: 'VIP Event & Catering Space',
-      verifiedDuns: 'D-U-N-S #7749102'
-    }
-  ]);
-
   // Active Deal Room State
   const [deal, setDeal] = useState({
     id: 'demo-deal-123',
@@ -97,49 +62,52 @@ export default function MasterDashboardPage() {
     signed_a: false,
     signed_b: false,
     offer_a: {
-      title: 'Surplus Premium Apparel Stock',
-      offering: '250 Units Hoodies & Overstock Wear',
-      looking_for: '4K Studio Video Production',
+      title: 'Surplus Premium Apparel Stock & Merch',
+      offering: '250 Units Premium Hoodies & Overstock Wear',
+      looking_for: '4K Studio Video Production & Content Creation',
       value: 8500,
       company: 'Easy Mondays Apparel',
       verified: true,
-      skills: ['Apparel Supply', 'Logistics'],
-      portfolioUrl: 'https://easymondays.com',
       duns: 'D-U-N-S #8849201'
     },
     offer_b: {
       title: 'Full 4K Video Production & Editing',
-      offering: '50 Hours Studio 4K Production',
-      looking_for: 'Furnished Commercial Space',
+      offering: '50 Hours Studio 4K Multi-cam Production & Post-Editing',
+      looking_for: 'Furnished Commercial Office or Co-working Space',
       value: 5000,
       company: 'Montreal Creative Studios',
       verified: true,
-      skills: ['4K Camera Operations', 'Editing'],
-      portfolioUrl: 'https://vimeo.com',
       duns: 'D-U-N-S #9930214'
     }
   });
 
   const [messages, setMessages] = useState([
-    { sender: 'Montreal Creative Studios', text: 'Hey! Our studio crew is open next week for filming.' },
-    { sender: 'You', text: 'Sounds great! SOW milestones are configured.' }
+    { sender: 'Montreal Creative Studios', text: 'Hey! Our studio crew is open next week for filming. Can you prepare the apparel items?' },
+    { sender: 'You', text: 'Sounds great! Inventory is cataloged and ready for pickup.' }
   ]);
   const [newMessage, setNewMessage] = useState('');
 
-  const offerAVal = deal?.offer_a?.value ?? 0;
-  const offerBVal = deal?.offer_b?.value ?? 0;
-  const tradeDelta = Math.abs(offerAVal - offerBVal);
-
+  // Global Keyboard Event Listener for Cmd + K
   useEffect(() => {
     setMounted(true);
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCmdKOpen((prev) => !prev);
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Network Ping Simulation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNetworkPing(290 + Math.floor(Math.random() * 40));
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -149,6 +117,32 @@ export default function MasterDashboardPage() {
     });
   }, [mounted]);
 
+  useEffect(() => {
+    if (!mounted || !activeDealId) return;
+
+    const channel = supabase.channel(`deal-room-${activeDealId}`, {
+      config: { broadcast: { self: true } }
+    });
+
+    channel
+      .on('broadcast', { event: 'chat-message' }, (payload) => {
+        if (payload?.payload) {
+          setMessages((prev) => [...prev, payload.payload]);
+        }
+      })
+      .on('broadcast', { event: 'sign-contract' }, (payload) => {
+        if (payload?.payload?.partyKey) {
+          setDeal((prev) => ({ ...prev, [payload.payload.partyKey]: true }));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [mounted, activeDealId]);
+
+  // RWA Minting Process Simulation
   const executeRwaMinting = () => {
     setRwaMintStage('verifying_doc');
     setTokenizedRwaOutput(null);
@@ -191,14 +185,16 @@ export default function MasterDashboardPage() {
 
       const data = await res.json();
       if (data?.decision) {
-        setMessages((prev) => [...prev, { sender: 'TradeIt Agent', text: `🤖 [AI Agent]: ${data.decision.agentMessage}` }]);
+        const agentMsg = `🤖 [AI Agent]: ${data.decision.agentMessage}`;
+        setMessages((prev) => [...prev, { sender: 'TradeIt Agent', text: agentMsg }]);
+
         if (data.decision.action === 'ACCEPT_DEAL') {
           setDeal((prev) => ({ ...prev, signed_a: true }));
           triggerTransactionLifecycle();
         }
       }
     } catch (err) {
-      console.error(err);
+      console.error('Agent trigger failed:', err);
     } finally {
       setAgentThinking(false);
     }
@@ -214,249 +210,306 @@ export default function MasterDashboardPage() {
           setTxStep(4);
           setShowConfetti(true);
           setTimeout(() => setTxStep(null), 3000);
-        }, 1000);
-      }, 1000);
-    }, 1000);
+        }, 1200);
+      }, 1200);
+    }, 1200);
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-    setMessages((prev) => [...prev, { sender: currentUser || 'You', text: newMessage.trim() }]);
+
+    const msgPayload = { sender: currentUser || 'You', text: newMessage.trim() };
+    setMessages((prev) => [...prev, msgPayload]);
+
+    if (activeDealId) {
+      const channel = supabase.channel(`deal-room-${activeDealId}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'chat-message',
+        payload: msgPayload,
+      });
+    }
+
     setNewMessage('');
   };
 
-  const handleSignAgreement = () => {
+  const handleSignAgreement = async () => {
     setDeal((prev) => ({ ...prev, signed_a: true }));
     triggerTransactionLifecycle();
+
+    if (activeDealId) {
+      const channel = supabase.channel(`deal-room-${activeDealId}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'sign-contract',
+        payload: { partyKey: 'signed_a' },
+      });
+    }
   };
 
-  const toggleSowMilestone = (id: number) => {
-    setSowMilestones((prev) => prev.map((m) => m.id === id ? { ...m, completed: !m.completed } : m));
-  };
-
-  const handleBidOnRfqNeed = (rfq: typeof rfqNeeds[0]) => {
+  const handleInitiateCircularLoop = (loop: CircularLoopMatch) => {
+    if (!loop) return;
     setDeal({
-      id: `rfq-deal-${rfq.id}`,
+      id: loop.loop_id || 'loop-demo',
+      status: 'active-loop',
+      signed_a: false,
+      signed_b: false,
+      offer_a: {
+        title: loop.node_a?.offering_summary ?? 'Offer A',
+        offering: loop.node_a?.offering_summary ?? 'Offer A',
+        looking_for: loop.node_a?.looking_for_summary ?? 'Need A',
+        value: loop.node_a?.estimated_value ?? 0,
+        company: loop.node_a?.company_name ?? 'Company A',
+        verified: true,
+        duns: 'D-U-N-S Verified'
+      },
+      offer_b: {
+        title: loop.node_b?.offering_summary ?? 'Offer B',
+        offering: loop.node_b?.offering_summary ?? 'Offer B',
+        looking_for: loop.node_b?.looking_for_summary ?? 'Need B',
+        value: loop.node_b?.estimated_value ?? 0,
+        company: loop.node_b?.company_name ?? 'Company B',
+        verified: true,
+        duns: 'D-U-N-S Verified'
+      }
+    });
+
+    setActiveDealId(loop.loop_id || 'loop-demo');
+  };
+
+  const runDirectTwoWayDemo = () => {
+    setDeal({
+      id: 'demo-2way-swap',
       status: 'negotiating',
       signed_a: false,
       signed_b: false,
       offer_a: {
-        title: 'Service Capacity Bid',
-        offering: 'Professional Service Capacity',
-        looking_for: rfq.title,
-        value: rfq.targetFmv,
-        company: 'Your Studio',
+        title: DEMO_PRESET_OFFERS[0]?.title ?? 'Surplus Apparel',
+        offering: DEMO_PRESET_OFFERS[0]?.offering_summary ?? '250 Hoodies',
+        looking_for: DEMO_PRESET_OFFERS[0]?.looking_for_summary ?? '4K Video Production',
+        value: DEMO_PRESET_OFFERS[0]?.estimated_value ?? 8500,
+        company: DEMO_PRESET_OFFERS[0]?.company_name ?? 'Easy Mondays Apparel',
         verified: true,
-        skills: ['Verified Partner'],
-        portfolioUrl: 'https://tradeit.tv',
-        duns: 'D-U-N-S Verified'
+        duns: 'D-U-N-S #8849201'
       },
       offer_b: {
-        title: rfq.title,
-        offering: rfq.offeringTrade,
-        looking_for: 'Service Capacity Bid',
-        value: rfq.targetFmv,
-        company: rfq.company,
+        title: DEMO_PRESET_OFFERS[1]?.title ?? '4K Video Production',
+        offering: DEMO_PRESET_OFFERS[1]?.offering_summary ?? '50 Studio Hours',
+        looking_for: DEMO_PRESET_OFFERS[1]?.looking_for_summary ?? 'Office Space',
+        value: DEMO_PRESET_OFFERS[1]?.estimated_value ?? 5000,
+        company: DEMO_PRESET_OFFERS[1]?.company_name ?? 'Montreal Creative Studios',
         verified: true,
-        skills: ['Corporate Member'],
-        portfolioUrl: 'https://tradeit.tv',
-        duns: rfq.verifiedDuns
+        duns: 'D-U-N-S #9930214'
       }
     });
-
     setMessages([
-      { sender: rfq.company, text: `Need: ${rfq.title}. Can your studio handle this via barter?` },
-      { sender: 'You', text: `Yes! Our studio can fulfill this requirement.` }
+      { sender: 'Easy Mondays Apparel', text: 'We have 250 units of premium hoodies ready. Can you handle 4K video reels for our fall line?' },
+      { sender: 'Montreal Creative Studios', text: 'Our studio space and crew are open next week. Let’s execute the barter swap.' }
     ]);
-
-    setActiveDealId(`rfq-deal-${rfq.id}`);
+    setActiveDealId('demo-2way-swap');
   };
 
-  const handleExportQuickBooksCsv = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Transaction_ID,Date,Party_A,Party_B,FMV_CAD,GST_HST_5,Net_Cash_Outlay,Status\n"
-      + `${deal.id},2026-08-14,"${deal.offer_a.company}","${deal.offer_b.company}",${offerAVal},${(offerAVal * 0.05).toFixed(2)},0.00,SETTLED_MULTI_SIG_PDA`;
+  const runThreeWayLoopDemo = () => {
+    handleInitiateCircularLoop({
+      loop_id: 'loop-demo-3way-investor',
+      parity_score: 98,
+      total_liquidity_unlocked: 18500,
+      node_a: DEMO_PRESET_OFFERS[0],
+      node_b: DEMO_PRESET_OFFERS[1],
+      node_c: DEMO_PRESET_OFFERS[2],
+    });
+  };
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `TRADEIT_TAX_STATEMENT_${deal.id}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const runAiNegotiatorDemo = () => {
+    runDirectTwoWayDemo();
+    setTimeout(() => {
+      triggerAiAgentNegotiation();
+    }, 300);
   };
 
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#4a6370] text-slate-100 flex flex-col font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-[#4a6370] text-slate-100 flex flex-col font-sans transition-colors duration-300 selection:bg-[#384c57] selection:text-white relative">
       
-      {/* CONFETTI OVERLAY */}
+      {/* CONFETTI CELEBRATION OVERLAY */}
       {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-          <div className="bg-emerald-600 text-white font-extrabold text-sm px-6 py-2.5 rounded-full shadow-2xl animate-bounce">
-            ✨ 2-of-2 Escrow Multi-Sig Settled!
+        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center overflow-hidden">
+          <div className="text-center space-y-2 animate-bounce">
+            <span className="text-6xl">✨</span>
+            <div className="bg-emerald-600 text-white font-extrabold text-sm px-6 py-2 rounded-full shadow-2xl">
+              2-of-2 Multi-Sig Contract Settled!
+            </div>
           </div>
         </div>
       )}
 
-      {/* HEADER WITH RESTORED B2B TRADING BADGE */}
-      <header className="border-b border-white/10 bg-[#425965]/95 backdrop-blur-md px-6 py-3 flex items-center justify-between sticky top-0 z-40 print:hidden">
-        
-        {/* BRAND LOGO & B2B TRADING BADGE */}
-        <div className="flex items-center space-x-3">
-          <div className="p-1.5 bg-white/10 rounded-xl border border-white/20 shadow-sm">
-            <Tornado className="w-5 h-5 text-white" />
+      {/* HEADER NAVIGATION */}
+      <header className="border-b border-white/10 bg-[#425965]/90 backdrop-blur-md px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 print:hidden">
+        <div className="flex items-center space-x-4">
+          <div className="p-2 bg-white/10 rounded-full border border-white/20 shadow-sm">
+            <Tornado className="w-5 h-5 animate-spin" style={{ animationDuration: '10s' }} />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-base tracking-wider text-white">TRADEIT</span>
-            <span className="text-[10px] font-mono px-2 py-0.5 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full font-bold">
-              B2B TRADING
-            </span>
+          <div>
+            <h1 className="font-bold text-base tracking-wide flex items-center gap-2">
+              TRADEIT <span className="text-xs font-mono px-2.5 py-0.5 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full">B2B NETWORK</span>
+            </h1>
+            <p className="text-[11px] opacity-80 font-mono hidden sm:block">tradeit.tv • Reciprocal Trade Platform</p>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 rounded-full text-[11px] font-mono">
+            <Activity className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+            <span>Solana Devnet: <strong>{networkPing}ms</strong></span>
           </div>
         </div>
 
-        {/* COMPACT ACTIONS (BARTER WALLET REMOVED) */}
         <div className="flex items-center space-x-3">
-          
-          {/* SEARCH BUTTON */}
           <button
             onClick={() => setIsCmdKOpen(true)}
-            className="hidden sm:flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/20 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer"
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer"
           >
             <Search className="w-3.5 h-3.5 text-slate-200" />
-            <span>Search</span>
+            <span className="hidden sm:inline">Search / Cmd</span>
             <kbd className="bg-black/20 text-[10px] px-1.5 py-0.5 rounded font-mono border border-white/20 text-yellow-200">⌘K</kbd>
           </button>
 
-          {/* AUTH USER */}
+          <Link href="/pricing">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white/10 hover:bg-white/20 border-white/20 text-xs rounded-full cursor-pointer flex items-center gap-1.5 shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
+              <span>Membership Plans</span>
+            </Button>
+          </Link>
+
           {currentUser ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-900/40 border border-emerald-400/30 rounded-full text-xs font-medium text-emerald-200">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-900/40 border border-emerald-400/30 rounded-full text-xs font-semibold text-emerald-200">
               <UserCheck className="w-3.5 h-3.5" />
-              <span className="truncate max-w-[120px]">{currentUser}</span>
+              <span className="truncate max-w-[120px] sm:max-w-[180px]">{currentUser}</span>
             </div>
           ) : (
-            <button
+            <Button
               onClick={() => setIsAuthOpen(true)}
-              className="px-3.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-xs rounded-full font-medium cursor-pointer transition-all flex items-center gap-1.5"
+              variant="outline"
+              size="sm"
+              className="bg-white/10 hover:bg-white/20 border-white/20 text-xs rounded-full cursor-pointer flex items-center gap-1"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>Login</span>
-            </button>
+              <span>Login / Verify</span>
+            </Button>
           )}
 
-          {/* PRIMARY POST BUTTON */}
+          {activeDealId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveDealId(null)}
+              className="bg-white/10 hover:bg-white/20 border-white/20 text-xs rounded-full cursor-pointer"
+            >
+              Close Deal Panel
+            </Button>
+          )}
+
           <Button
             onClick={() => setIsUploadOpen(true)}
-            className="bg-white text-[#334652] hover:bg-slate-100 font-extrabold text-xs px-4 h-8 rounded-full shadow-md flex items-center gap-1 cursor-pointer transition-all"
+            className="bg-white text-[#334652] hover:bg-slate-100 font-bold text-xs px-5 h-9 rounded-full shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
           >
-            <Plus className="w-4 h-4 text-[#334652]" />
-            <span>Post Offer</span>
+            <PlusCircle className="w-4 h-4 text-[#334652]" />
+            <span>Post Offer & Need</span>
           </Button>
-
         </div>
       </header>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 max-w-[1500px] w-full mx-auto p-4 sm:p-6 space-y-6 print:hidden">
+      {/* MAIN B2B TRADE STAGE */}
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 space-y-8 relative print:hidden">
         
-        {/* REVERSE RFQ BOARD */}
-        <section className="bg-[#394f5c] border border-white/15 rounded-2xl p-5 space-y-4 shadow-md">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <div className="flex items-center gap-2">
-              <Megaphone className="w-4 h-4 text-yellow-200" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Active Client Requirements (RFQs)</h3>
-            </div>
-            <button
-              onClick={() => setIsUploadOpen(true)}
-              className="text-xs text-yellow-200 hover:underline font-medium"
-            >
-              + Post Requirement
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {rfqNeeds.map((rfq) => (
-              <div key={rfq.id} className="bg-[#2d404b] border border-white/10 rounded-xl p-4 flex flex-col justify-between space-y-3 hover:border-white/25 transition-all">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="text-emerald-300 font-bold">{rfq.company}</span>
-                    <span className="text-yellow-200">${rfq.targetFmv.toLocaleString()} CAD</span>
-                  </div>
-                  <h4 className="font-bold text-xs text-white line-clamp-1">{rfq.title}</h4>
-                  <p className="text-[11px] text-slate-300">
-                    <strong>Offers:</strong> {rfq.offeringTrade}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleBidOnRfqNeed(rfq)}
-                  className="w-full bg-white hover:bg-slate-100 text-[#334652] font-bold text-xs py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
-                >
-                  <span>Bid Capacity</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
+        {/* 1. HERO WELCOME CARD */}
+        <section className="rounded-3xl border border-white/15 bg-[#3e5562]/80 p-6 sm:p-8 backdrop-blur-md shadow-lg space-y-4 text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-200/10 border border-yellow-200/30 rounded-full text-xs font-medium text-yellow-200">
+                <BadgeCheck className="w-3.5 h-3.5 text-yellow-200" />
+                <span>Enterprise Verified • Zero Cash Outlay B2B Exchange</span>
               </div>
-            ))}
+              <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight text-white">
+                Unlock Value in Surplus Inventory & Service Capacity
+              </h2>
+              <p className="opacity-90 text-xs sm:text-sm leading-relaxed text-slate-200">
+                Trade directly with verified business partners. Execute 2-of-2 multi-sig agreements backed by real-time AI negotiation and Solana PDA escrow vaults.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Link href="/deals/DEAL-B2B-101">
+                <Button className="bg-white text-[#334652] hover:bg-slate-100 font-bold text-xs px-6 py-3 rounded-full shadow-md">
+                  Explore Live Deal Room ↗
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
 
-        {/* RESTORED: RWA TOKENIZATION & PROVENANCE STUDIO */}
-        <section className="rounded-2xl border border-white/15 bg-[#3b505d]/90 p-5 backdrop-blur-md shadow-lg space-y-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-yellow-200/10 rounded-xl border border-yellow-200/30">
-                <Coins className="w-5 h-5 text-yellow-200" />
+        {/* 2. UPGRADED RWA TOKENIZATION STUDIO (BROUGHT UP HERE!) */}
+        <section className="rounded-3xl border border-white/15 bg-[#3b505d]/90 p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-yellow-200/10 rounded-2xl border border-yellow-200/30">
+                <Coins className="w-6 h-6 text-yellow-200" />
               </div>
               <div>
-                <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                  Institutional RWA Tokenization Studio
-                  <span className="text-[9px] bg-yellow-200/20 text-yellow-200 px-2 py-0.5 rounded-full border border-yellow-200/30 font-mono">
-                    TOKEN-2022
+                <h3 className="text-lg font-extrabold text-slate-100 flex items-center gap-2">
+                  Institutional RWA Tokenization & Provenance Studio
+                  <span className="text-[10px] bg-yellow-200/20 text-yellow-200 px-2.5 py-0.5 rounded-full border border-yellow-200/30 font-mono">
+                    NEW
                   </span>
                 </h3>
-                <p className="text-xs text-slate-200/80">Convert commercial assets and invoices into compliant Solana Token-2022 SPL assets.</p>
+                <p className="text-xs text-slate-200/80">Convert physical commercial assets into compliant Solana Token-2022 SPL assets with on-chain document hashes.</p>
               </div>
             </div>
-            <span className="text-[10px] bg-white/10 border border-white/20 px-2.5 py-1 rounded-full text-slate-200 font-mono">
-              Program ID: Es7dux19...ERi
+            <span className="rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs text-slate-200 font-mono">
+              Token-2022 • Program: Es7dux19...ERi
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start text-xs">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            <div className="lg:col-span-7 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Left 7 Columns: Tokenization Controls */}
+            <div className="lg:col-span-7 space-y-5">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-200 mb-1 font-medium">Asset Category</label>
+                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Asset Class Category</label>
                   <select
                     value={rwaCategory}
                     onChange={(e) => setRwaCategory(e.target.value)}
-                    className="w-full rounded-xl bg-[#2d404b] border border-white/20 p-2.5 text-xs text-slate-100 focus:outline-none"
+                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs text-slate-100 focus:outline-none focus:border-white"
                   >
                     <option value="Commercial Invoice">Commercial Invoice (#INV-8849)</option>
-                    <option value="Freight Cargo Container">Freight Cargo Container</option>
-                    <option value="Agricultural Commodity">Agricultural Commodity</option>
-                    <option value="Industrial Equipment">Heavy Machinery & Fleet</option>
+                    <option value="Freight Cargo Container">Freight Cargo Container (Electronics)</option>
+                    <option value="Agricultural Commodity">Agricultural Commodity (Coffee)</option>
+                    <option value="Industrial Equipment">Heavy Machinery & Fleet Equipment</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-slate-200 mb-1 font-medium">Appraised Valuation ($ USD)</label>
+                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Appraised Valuation ($ USD)</label>
                   <input
                     type="number"
                     value={rwaValuation}
                     onChange={(e) => setRwaValuation(Number(e.target.value))}
-                    className="w-full rounded-xl bg-[#2d404b] border border-white/20 p-2.5 text-xs font-mono text-slate-100 focus:outline-none"
+                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs font-mono text-slate-100 focus:outline-none focus:border-white"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Document Hash Attachment & Fractional Shares */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-200 mb-1 font-medium">Legal Document File</label>
-                  <div className="flex items-center gap-2 bg-[#2d404b] border border-white/20 rounded-xl p-2">
+                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Verified Legal Document PDF</label>
+                  <div className="flex items-center gap-2 bg-[#2d404b] border border-white/20 rounded-2xl p-2.5 text-xs">
                     <FileCheck className="w-4 h-4 text-yellow-200" />
                     <input
                       type="text"
@@ -468,22 +521,23 @@ export default function MasterDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-slate-200 mb-1 font-medium">Fractional SPL Token Shares</label>
+                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Fractional SPL Token Shares</label>
                   <input
                     type="number"
                     value={fractionalShares}
                     onChange={(e) => setFractionalShares(Number(e.target.value))}
-                    className="w-full rounded-xl bg-[#2d404b] border border-white/20 p-2.5 text-xs font-mono text-slate-100 focus:outline-none"
+                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs font-mono text-slate-100 focus:outline-none focus:border-white"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-[#2d404b] border border-white/15 rounded-xl">
-                <div className="flex items-center gap-2">
+              {/* Solana Token-2022 Transfer Hook Toggle */}
+              <div className="flex items-center justify-between p-3.5 bg-[#2d404b] border border-white/15 rounded-2xl text-xs">
+                <div className="flex items-center gap-2.5">
                   <KeyRound className="w-4 h-4 text-yellow-200" />
                   <div>
-                    <span className="font-bold text-slate-100 block text-xs">Enforce Token-2022 Transfer Hooks</span>
-                    <span className="text-[10px] text-slate-300">Requires 2-of-2 multi-sig approval for transfers.</span>
+                    <span className="font-bold text-slate-100 block">Enforce Token-2022 Compliance Transfer Hooks</span>
+                    <span className="text-[10px] text-slate-300/80">Requires 2-of-2 multi-sig approval before token transfers on-chain.</span>
                   </div>
                 </div>
                 <input
@@ -497,7 +551,7 @@ export default function MasterDashboardPage() {
               <button
                 onClick={executeRwaMinting}
                 disabled={rwaMintStage !== 'idle' && rwaMintStage !== 'complete'}
-                className="w-full rounded-full bg-white hover:bg-slate-100 p-3 text-xs font-bold text-[#334652] transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full rounded-full bg-white hover:bg-slate-100 p-3.5 text-xs font-bold text-[#334652] transition-all shadow-md disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
                 {rwaMintStage === 'verifying_doc' && <><Loader2 className="w-4 h-4 animate-spin text-[#334652]" /> <span>Step 1/2: Hashing Physical PDF Document...</span></>}
                 {rwaMintStage === 'minting_spl' && <><Loader2 className="w-4 h-4 animate-spin text-[#334652]" /> <span>Step 2/2: Minting Token-2022 Asset on Solana...</span></>}
@@ -505,26 +559,35 @@ export default function MasterDashboardPage() {
               </button>
             </div>
 
-            <div className="lg:col-span-5 rounded-xl border border-white/15 bg-[#2d404b] p-4 space-y-3 font-mono">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <span className="text-slate-300 text-[10px] uppercase">On-Chain Provenance Record</span>
-                <span className={`px-2 py-0.5 rounded-full text-[9px] ${tokenizedRwaOutput ? "bg-emerald-900/60 text-emerald-200 border border-emerald-400/30" : "bg-white/10 text-slate-300"}`}>
+            {/* Right 5 Columns: On-Chain Asset Provenance Result */}
+            <div className="lg:col-span-5 rounded-2xl border border-white/15 bg-[#2d404b] p-5 space-y-4 font-mono text-xs">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <span className="text-slate-300 uppercase tracking-wider text-[10px]">On-Chain Provenance Record</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] ${tokenizedRwaOutput ? "bg-emerald-900/60 text-emerald-200 border border-emerald-400/30" : "bg-white/10 text-slate-300"}`}>
                   {tokenizedRwaOutput ? "MINTED ON-CHAIN" : "AWAITING MINT"}
                 </span>
               </div>
 
               {tokenizedRwaOutput ? (
-                <div className="space-y-2 text-slate-200 text-[11px]">
-                  <div className="flex justify-between"><span className="text-slate-400">Category:</span> <span>{tokenizedRwaOutput.category}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">SPL Mint:</span> <span className="text-yellow-200 font-bold">{tokenizedRwaOutput.mintAddress}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Valuation:</span> <span className="text-emerald-300">${tokenizedRwaOutput.valuation.toLocaleString()} USD</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Shares:</span> <span>{tokenizedRwaOutput.shares} (${tokenizedRwaOutput.sharePrice}/share)</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Standard:</span> <span className="text-sky-200 font-bold">{tokenizedRwaOutput.tokenStandard}</span></div>
+                <div className="space-y-2.5 text-slate-200">
+                  <div className="flex justify-between"><span className="text-slate-400">Asset Category:</span> <span>{tokenizedRwaOutput.category}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">SPL Mint Address:</span> <span className="text-yellow-200 font-bold">{tokenizedRwaOutput.mintAddress}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Appraised Value:</span> <span className="text-emerald-300">${tokenizedRwaOutput.valuation.toLocaleString()} USD</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Fractional Shares:</span> <span>{tokenizedRwaOutput.shares} (${tokenizedRwaOutput.sharePrice} / share)</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Document Hash:</span> <span className="text-slate-300 text-[10px]">{tokenizedRwaOutput.docHash}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Token Standard:</span> <span className="text-sky-200 font-bold">{tokenizedRwaOutput.tokenStandard}</span></div>
+                  
+                  <div className="pt-3 border-t border-white/10 text-[11px] text-emerald-200 space-y-1">
+                    <p>✓ Asset verified and ready for 2-of-2 Escrow Staking</p>
+                    <a href={`https://explorer.solana.com/?cluster=devnet`} target="_blank" rel="noreferrer" className="text-yellow-200 underline block text-[10px]">
+                      View Token Mint on Solana Explorer ↗
+                    </a>
+                  </div>
                 </div>
               ) : (
-                <div className="py-8 text-center text-slate-300 space-y-1 font-sans">
-                  <Coins className="w-6 h-6 text-yellow-200 mx-auto opacity-70" />
-                  <p className="text-xs">Configure your RWA parameters and click mint to generate a Token-2022 asset on Solana Devnet.</p>
+                <div className="py-10 text-center text-slate-300 space-y-2 font-sans">
+                  <Coins className="w-8 h-8 text-yellow-200 mx-auto opacity-70" />
+                  <p className="text-xs">Configure your RWA parameters and click mint to generate a Token-2022 compliant asset on Solana Devnet.</p>
                 </div>
               )}
             </div>
@@ -532,21 +595,17 @@ export default function MasterDashboardPage() {
           </div>
         </section>
 
-        {/* DEMO CONTROLLER */}
+        {/* 3. DEMO CONTROLLER */}
         <DemoStoryController 
-          onRunTwoWayDemo={() => {
-            setActiveDealId('demo-deal-123');
-          }}
-          onRunThreeWayDemo={() => {
-            setActiveDealId('demo-deal-123');
-          }}
-          onRunAiNegotiatorDemo={() => {
-            setActiveDealId('demo-deal-123');
-            setTimeout(triggerAiAgentNegotiation, 300);
-          }}
+          onRunTwoWayDemo={runDirectTwoWayDemo}
+          onRunThreeWayDemo={runThreeWayLoopDemo}
+          onRunAiNegotiatorDemo={runAiNegotiatorDemo}
         />
 
-        {/* STAGE FEED & DEAL ROOM GRID */}
+        {/* 4. 3-WAY CIRCULAR LOOP BANNER */}
+        <CircularLoopBanner loops={[]} onInitiateLoop={handleInitiateCircularLoop} />
+
+        {/* 5. B2B STAGE & DEAL ROOM GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           <div className={`${activeDealId ? 'lg:col-span-6' : 'lg:col-span-12'} transition-all duration-300`}>
@@ -554,91 +613,68 @@ export default function MasterDashboardPage() {
           </div>
 
           {activeDealId && (
-            <div className="lg:col-span-6 bg-[#394f5c] border border-white/20 rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-xl sticky top-20 h-[calc(100vh-100px)] overflow-y-auto hide-scrollbar">
+            <div className="lg:col-span-6 bg-[#394f5c] border border-white/20 rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-2xl relative sticky top-24 h-[calc(100vh-120px)] overflow-y-auto hide-scrollbar animate-in slide-in-from-right duration-300">
               
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <ArrowLeftRight className="w-4 h-4 text-slate-100" />
-                  <h3 className="font-extrabold text-white text-xs uppercase tracking-wider">Autonomous Deal Room</h3>
+              <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ArrowLeftRight className="w-5 h-5 text-slate-100" />
+                    <h3 className="font-extrabold text-white text-sm">AUTONOMOUS DEAL ROOM</h3>
+                  </div>
+                  <p className="text-[11px] text-slate-200/80 font-mono mt-0.5">2-of-2 Multi-Sig Escrow Engine</p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={triggerAiAgentNegotiation}
-                    disabled={agentThinking}
-                    className="px-3 py-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full text-xs font-semibold flex items-center gap-1 cursor-pointer transition-all"
-                  >
-                    {agentThinking ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bot className="w-3 h-3 text-yellow-200" />}
-                    <span>AI Negotiator</span>
-                  </button>
-
-                  <button 
-                    onClick={() => setActiveDealId(null)}
-                    className="text-slate-400 hover:text-white p-1"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={triggerAiAgentNegotiation}
+                  disabled={agentThinking}
+                  className="px-3.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
+                >
+                  {agentThinking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5 text-yellow-200" />}
+                  <span>{agentThinking ? 'AI Agent Negotiating...' : 'Trigger AI Negotiator'}</span>
+                </button>
               </div>
 
-              {/* OFFERS SIDE BY SIDE */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div 
                   onClick={() => setSelectedCompanyProfile(deal?.offer_a?.company ?? null)}
-                  className="bg-[#2d404b] p-3 rounded-xl border border-white/10 space-y-1 cursor-pointer hover:border-white/30"
+                  className="bg-[#2d404b] p-3.5 rounded-2xl border border-white/10 space-y-1 hover:border-white/30 cursor-pointer transition-all"
                 >
-                  <span className="text-[9px] text-emerald-300 font-bold uppercase">{deal?.offer_a?.company}</span>
-                  <p className="font-bold text-white line-clamp-1">{deal?.offer_a?.title}</p>
-                  <p className="text-slate-300 font-mono text-[10px]">${deal?.offer_a?.value} CAD</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-emerald-300 uppercase">{deal?.offer_a?.company ?? 'Party A'} ↗</p>
+                    <span className="text-[9px] bg-emerald-900/60 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.5 rounded font-mono">
+                      ✓ D&B Checked
+                    </span>
+                  </div>
+                  <p className="font-bold text-white line-clamp-1">{deal?.offer_a?.title ?? 'Offer A'}</p>
+                  <p className="text-slate-300 font-mono text-[10px]">${(deal?.offer_a?.value ?? 0).toLocaleString()} CAD Value</p>
                 </div>
 
                 <div 
                   onClick={() => setSelectedCompanyProfile(deal?.offer_b?.company ?? null)}
-                  className="bg-[#2d404b] p-3 rounded-xl border border-white/10 space-y-1 cursor-pointer hover:border-white/30"
+                  className="bg-[#2d404b] p-3.5 rounded-2xl border border-white/10 space-y-1 hover:border-white/30 cursor-pointer transition-all"
                 >
-                  <span className="text-[9px] text-sky-300 font-bold uppercase">{deal?.offer_b?.company}</span>
-                  <p className="font-bold text-white line-clamp-1">{deal?.offer_b?.title}</p>
-                  <p className="text-slate-300 font-mono text-[10px]">${deal?.offer_b?.value} CAD</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-sky-300 uppercase">{deal?.offer_b?.company ?? 'Party B'} ↗</p>
+                    <span className="text-[9px] bg-emerald-900/60 text-emerald-200 border border-emerald-400/30 px-1.5 py-0.5 rounded font-mono">
+                      ✓ D&B Checked
+                    </span>
+                  </div>
+                  <p className="font-bold text-white line-clamp-1">{deal?.offer_b?.title ?? 'Offer B'}</p>
+                  <p className="text-slate-300 font-mono text-[10px]">${(deal?.offer_b?.value ?? 0).toLocaleString()} CAD Value</p>
                 </div>
               </div>
 
-              {/* SOW MILESTONES */}
-              <div className="bg-[#273842] border border-white/10 rounded-xl p-3 space-y-2 text-xs">
-                <div className="flex items-center justify-between pb-1 border-b border-white/10">
-                  <span className="font-bold text-white text-[11px] flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-yellow-200" /> SOW Milestones
-                  </span>
-                  <span className="text-[9px] text-slate-300 font-mono">2-of-2 Escrow</span>
-                </div>
-
-                <div className="space-y-1.5">
-                  {sowMilestones.map((m) => (
-                    <div 
-                      key={m.id}
-                      onClick={() => toggleSowMilestone(m.id)}
-                      className={`p-2 rounded-lg border flex items-center justify-between cursor-pointer text-[11px] ${
-                        m.completed ? 'bg-emerald-950/50 border-emerald-400/40 text-emerald-200' : 'bg-[#2d404b] border-white/10 text-slate-200'
-                      }`}
-                    >
-                      <span className="font-medium">{m.title}</span>
-                      <span className="font-mono text-[10px] font-bold">{m.percent}% Release</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CHAT */}
-              <div className="flex-1 bg-[#2d404b] border border-white/10 rounded-xl p-3 flex flex-col justify-between min-h-[160px]">
-                <div className="space-y-2 overflow-y-auto max-h-[120px] hide-scrollbar text-xs">
+              <div className="flex-1 bg-[#2d404b] border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[220px]">
+                <div className="space-y-3 overflow-y-auto max-h-[160px] hide-scrollbar">
                   {messages.map((msg, i) => (
                     <div key={i} className={`flex flex-col ${msg.sender === (currentUser || 'You') ? 'items-end' : 'items-start'}`}>
                       <span className="text-[9px] text-slate-300 mb-0.5">{msg.sender}</span>
-                      <div className={`p-2.5 rounded-xl text-xs max-w-[85%] ${
+                      <div className={`p-3 rounded-2xl text-xs max-w-[85%] ${
                         msg.sender.includes('Agent') 
                           ? 'bg-[#3e5562] border border-yellow-200/30 text-yellow-100'
                           : msg.sender === (currentUser || 'You')
-                          ? 'bg-white text-[#334652] font-semibold' 
-                          : 'bg-[#3e5562] text-slate-100 border border-white/10'
+                          ? 'bg-white text-[#334652] font-semibold rounded-br-none' 
+                          : 'bg-[#3e5562] text-slate-100 border border-white/10 rounded-bl-none'
                       }`}>
                         {msg.text}
                       </div>
@@ -646,48 +682,49 @@ export default function MasterDashboardPage() {
                   ))}
                 </div>
 
-                <form onSubmit={handleSendMessage} className="flex gap-2 mt-2 pt-2 border-t border-white/10">
+                <form onSubmit={handleSendMessage} className="flex gap-2 mt-3 pt-3 border-t border-white/10">
                   <input 
                     type="text"
-                    placeholder="Type message or terms..."
+                    placeholder="Propose terms or trigger AI Negotiator..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 bg-[#3a4f5c] border border-white/20 rounded-full px-3 py-1.5 text-xs text-white focus:outline-none"
+                    className="flex-1 bg-[#3a4f5c] border border-white/20 rounded-full px-4 py-2 text-xs text-white placeholder:text-slate-300/60 focus:outline-none focus:border-white"
                   />
-                  <Button type="submit" size="sm" className="bg-white text-[#334652] font-bold rounded-full px-3 cursor-pointer">
-                    <Send className="w-3 h-3" />
+                  <Button type="submit" size="sm" className="bg-white hover:bg-slate-100 text-[#334652] font-bold rounded-full px-4 cursor-pointer">
+                    <Send className="w-3.5 h-3.5" />
                   </Button>
                 </form>
               </div>
 
-              {/* SIGNING AREA */}
-              <div className="pt-2 border-t border-white/10 space-y-2">
+              <EscrowMilestoneTracker dealId={deal.id} />
+
+              <div className="pt-2 border-t border-white/10 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-200">
+                  <div className="flex items-center gap-2 text-xs text-slate-200">
                     <ShieldCheck className="w-4 h-4 text-emerald-300" />
-                    <span>Solana PDA Escrow</span>
+                    <span>2-of-2 Multi-Sig Solana Escrow</span>
                   </div>
 
                   <Button
                     onClick={handleSignAgreement}
                     disabled={deal.signed_a}
-                    className={`text-xs font-bold px-4 h-8 rounded-full cursor-pointer ${
+                    className={`text-xs font-bold px-5 h-9 rounded-full cursor-pointer ${
                       deal.signed_a 
                         ? 'bg-emerald-700 text-white' 
                         : 'bg-white hover:bg-slate-100 text-[#334652] font-bold shadow-md'
                     }`}
                   >
-                    {deal.signed_a ? 'Signed ✓' : 'Sign Agreement'}
+                    {deal.signed_a ? 'Agreement Signed ✓' : 'Sign Trade Deal'}
                   </Button>
                 </div>
 
                 {deal.signed_a && (
                   <button
-                    onClick={() => setShowContractModal(true)}
-                    className="w-full bg-[#2d404b] hover:bg-[#344854] border border-emerald-400/40 text-emerald-200 font-bold text-xs py-1.5 rounded-full flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    onClick={() => setShowContractModal(false)}
+                    className="w-full bg-[#2d404b] hover:bg-[#344854] border border-emerald-400/40 text-emerald-200 font-bold text-xs py-2 rounded-full flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    <span>Export B2B Contract & Tax Statement</span>
+                    <span>View & Export Executed B2B Contract (PDF)</span>
                   </button>
                 )}
               </div>
@@ -697,21 +734,33 @@ export default function MasterDashboardPage() {
 
         </div>
 
-        {/* RESTORED: HOW IT WORKS SECTION */}
+        {/* 6. HOW IT WORKS SECTION */}
         <HowItWorksSection />
 
       </main>
 
-      {/* COMMAND PALETTE */}
+      {/* FOOTER */}
+      <footer className="border-t border-white/10 bg-[#425965] py-6 px-6 mt-12 text-xs opacity-90 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <span className="font-bold">TradeIt B2B</span> • Reciprocal Trade & Tokenized Asset Engine
+        </div>
+        <div className="flex gap-6 font-medium">
+          <Link href="/escrow" className="hover:opacity-100 transition-all">Escrow Terminal</Link>
+          <Link href="/deals/DEAL-B2B-101" className="hover:opacity-100 transition-all">Deal Room</Link>
+          <a href="https://explorer.solana.com/?cluster=devnet" target="_blank" rel="noreferrer" className="hover:opacity-100 transition-all">Solana Explorer ↗</a>
+        </div>
+      </footer>
+
+      {/* COMMAND PALETTE MODAL */}
       {isCmdKOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-start justify-center pt-20 p-4">
-          <div className="bg-[#2d404b] border border-white/20 w-full max-w-xl rounded-2xl shadow-2xl p-4 space-y-3 text-slate-100">
+          <div className="bg-[#2d404b] border border-white/20 w-full max-w-xl rounded-2xl shadow-2xl p-4 space-y-4 text-slate-100">
             <div className="flex items-center gap-2 border-b border-white/10 pb-3">
               <Search className="w-4 h-4 text-slate-300" />
               <input
                 type="text"
                 autoFocus
-                placeholder="Search offers or type command..."
+                placeholder="Type a command or search deals..."
                 value={cmdSearchQuery}
                 onChange={(e) => setCmdSearchQuery(e.target.value)}
                 className="w-full bg-transparent text-sm focus:outline-none placeholder:text-slate-300/60"
@@ -722,57 +771,74 @@ export default function MasterDashboardPage() {
             </div>
 
             <div className="space-y-1 text-xs">
+              <p className="text-[10px] uppercase font-mono text-slate-300/60 px-2">Quick Navigation</p>
               <button
                 onClick={() => { setActiveDealId('demo-deal-123'); setIsCmdKOpen(false); }}
-                className="w-full text-left p-2 rounded-xl hover:bg-white/10 flex items-center justify-between transition-all"
+                className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center justify-between transition-all"
               >
-                <span>🚀 Open Autonomous Deal Room</span>
+                <span>🚀 Launch Autonomous Deal Room (DEAL-B2B-101)</span>
                 <ArrowRight className="w-3.5 h-3.5 opacity-60" />
               </button>
 
               <Link
                 href="/escrow"
                 onClick={() => setIsCmdKOpen(false)}
-                className="w-full text-left p-2 rounded-xl hover:bg-white/10 flex items-center justify-between transition-all block"
+                className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center justify-between transition-all block"
               >
-                <span>🔒 Solana Escrow Terminal</span>
+                <span>🔒 Open Solana Escrow Terminal</span>
                 <ArrowRight className="w-3.5 h-3.5 opacity-60" />
               </Link>
+
+              <button
+                onClick={() => {
+                  window.scrollTo({ top: 400, behavior: 'smooth' });
+                  setIsCmdKOpen(false);
+                }}
+                className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center justify-between transition-all"
+              >
+                <span>⚡ Jump to RWA Tokenization Studio</span>
+                <ArrowRight className="w-3.5 h-3.5 opacity-60" />
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TRANSACTION STEPPER MODAL */}
+      {/* TRANSACTION LIFECYCLE MODAL */}
       {txStep !== null && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#2d404b] border border-white/20 w-full max-w-md rounded-2xl p-6 space-y-4 text-center text-slate-100 shadow-2xl">
-            <h3 className="font-bold text-sm">Solana Devnet Transaction Pipeline</h3>
-            <div className="space-y-2 text-xs font-mono text-left">
-              <div className={`p-2.5 rounded-lg border flex items-center justify-between ${txStep >= 1 ? 'bg-emerald-950/60 border-emerald-400/40 text-emerald-200' : 'bg-white/5 border-white/10 opacity-40'}`}>
+          <div className="bg-[#2d404b] border border-white/20 w-full max-w-md rounded-3xl p-6 space-y-6 text-center text-slate-100 shadow-2xl">
+            <h3 className="font-bold text-base">Solana Devnet Transaction Pipeline</h3>
+            <div className="space-y-3 text-xs font-mono text-left">
+              <div className={`p-3 rounded-xl border flex items-center justify-between ${txStep >= 1 ? 'bg-emerald-950/60 border-emerald-400/40 text-emerald-200' : 'bg-white/5 border-white/10 opacity-40'}`}>
                 <span>1. Wallet Signature Request</span>
-                <span>{txStep > 1 ? '✓ Complete' : '⏳'}</span>
+                <span>{txStep > 1 ? '✓ Complete' : txStep === 1 ? '⏳ Signing...' : ''}</span>
               </div>
-              <div className={`p-2.5 rounded-lg border flex items-center justify-between ${txStep >= 2 ? 'bg-emerald-950/60 border-emerald-400/40 text-emerald-200' : 'bg-white/5 border-white/10 opacity-40'}`}>
-                <span>2. Broadcast to Devnet</span>
-                <span>{txStep > 2 ? '✓ Complete' : '⚡'}</span>
+              <div className={`p-3 rounded-xl border flex items-center justify-between ${txStep >= 2 ? 'bg-emerald-950/60 border-emerald-400/40 text-emerald-200' : 'bg-white/5 border-white/10 opacity-40'}`}>
+                <span>2. Broadcast to Solana Devnet</span>
+                <span>{txStep > 2 ? '✓ Complete' : txStep === 2 ? '⚡ Broadcasting...' : ''}</span>
               </div>
-              <div className={`p-2.5 rounded-lg border flex items-center justify-between ${txStep >= 3 ? 'bg-emerald-950/60 border-emerald-400/40 text-emerald-200' : 'bg-white/5 border-white/10 opacity-40'}`}>
+              <div className={`p-3 rounded-xl border flex items-center justify-between ${txStep >= 3 ? 'bg-emerald-950/60 border-emerald-400/40 text-emerald-200' : 'bg-white/5 border-white/10 opacity-40'}`}>
                 <span>3. 2-of-2 PDA Vault Creation</span>
-                <span>{txStep > 3 ? '✓ Complete' : '🔒'}</span>
+                <span>{txStep > 3 ? '✓ Complete' : txStep === 3 ? '🔒 Locking...' : ''}</span>
+              </div>
+              <div className={`p-3 rounded-xl border flex items-center justify-between ${txStep >= 4 ? 'bg-emerald-950/60 border-emerald-400/40 text-emerald-200' : 'bg-white/5 border-white/10 opacity-40'}`}>
+                <span>4. Supabase Audit Log & Webhook</span>
+                <span>{txStep === 4 ? '✅ Dispatched' : ''}</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modals */}
+      {/* Upload Studio Modal */}
       <PitchUpload 
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
         onUploadSuccess={() => window.location.reload()}
       />
 
+      {/* Auth Modal */}
       <AuthModal 
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
@@ -782,62 +848,83 @@ export default function MasterDashboardPage() {
         }}
       />
 
+      {/* Company Network Profile Drawer */}
       <CompanyProfileDrawer 
         companyName={selectedCompanyProfile}
         onClose={() => setSelectedCompanyProfile(null)}
       />
 
-      {/* CONTRACT & TAX MODAL */}
+      {/* Printable Contract Vault Modal */}
       {showContractModal && (
-        <div className="fixed inset-0 z-50 bg-[#354854]/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 border border-slate-300 w-full max-w-2xl rounded-2xl p-6 space-y-4 shadow-2xl my-auto">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-sm font-black text-slate-900 uppercase">EXECUTED CONTRACT & TAX RECEIPT</h3>
+        <div className="fixed inset-0 z-50 bg-[#354854]/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white text-slate-900 border border-slate-300 w-full max-w-2xl rounded-3xl p-8 space-y-6 relative shadow-2xl my-auto print:p-0 print:border-none print:shadow-none">
+            
+            <div className="flex items-center justify-between border-b pb-4 border-slate-200 print:hidden">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-sm font-black text-slate-900 uppercase">EXECUTED B2B BARTER AGREEMENT</h3>
+              </div>
               <div className="flex items-center gap-2">
                 <button 
-                  onClick={handleExportQuickBooksCsv}
-                  className="px-3 py-1 bg-emerald-700 text-white font-bold text-xs rounded-full cursor-pointer"
+                  onClick={() => window.print()}
+                  className="px-4 py-1.5 bg-[#334652] text-white font-bold text-xs rounded-full flex items-center gap-1.5 hover:bg-[#283842] cursor-pointer"
                 >
-                  Export CSV
+                  <Download className="w-3.5 h-3.5" /> Print / Save PDF
                 </button>
                 <button 
                   onClick={() => setShowContractModal(false)}
                   className="p-1 text-slate-500 hover:text-slate-900 cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <div className="space-y-3 text-xs font-serif leading-relaxed">
-              <div className="flex justify-between items-start border-b pb-2">
+            <div className="space-y-4 text-xs font-serif leading-relaxed">
+              <div className="flex justify-between items-start border-b pb-3">
                 <div>
-                  <h2 className="text-base font-black font-sans">TRADEIT B2B BARTER INVOICE</h2>
-                  <p className="text-[10px] text-slate-500 font-mono">Contract ID: {deal?.id}</p>
+                  <h2 className="text-lg font-black tracking-tight font-sans">TRADEIT AI BARTER SWAP CONTRACT</h2>
+                  <p className="text-[10px] text-slate-500 font-mono">Contract ID: {deal?.id} • Program ID: Es7dux19...ERi</p>
                 </div>
-                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full font-sans">
-                  VERIFIED ON SOLANA
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-full font-sans">
+                  VERIFIED ON SOLANA DEVNET
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200 font-sans">
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 font-sans">
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase font-bold">Party A</p>
                   <p className="font-extrabold text-slate-900">{deal?.offer_a?.company}</p>
-                  <p className="text-[11px] font-mono text-emerald-700 font-bold">${deal?.offer_a?.value} CAD</p>
+                  <p className="text-[11px] text-slate-600">{deal?.offer_a?.offering}</p>
+                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal?.offer_a?.value} CAD Value</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase font-bold">Party B</p>
                   <p className="font-extrabold text-slate-900">{deal?.offer_b?.company}</p>
-                  <p className="text-[11px] font-mono text-emerald-700 font-bold">${deal?.offer_b?.value} CAD</p>
+                  <p className="text-[11px] text-slate-600">{deal?.offer_b?.offering}</p>
+                  <p className="text-[11px] font-mono text-emerald-700 font-bold mt-1">${deal?.offer_b?.value} CAD Value</p>
                 </div>
               </div>
 
-              <div className="bg-slate-100 p-3 rounded-xl border border-slate-300 font-sans space-y-1">
-                <h4 className="font-bold text-slate-900 text-xs">Tax Audit Record</h4>
-                <p className="text-[11px] text-slate-700 font-mono">Subtotal FMV: <strong>${offerAVal.toLocaleString()} CAD</strong> • Net Cash Outlay: <strong>$0.00 CAD</strong></p>
+              <div className="space-y-2">
+                <h4 className="font-sans font-bold text-slate-900 text-xs">Terms of Reciprocal Exchange</h4>
+                <p>
+                  Both participating entities hereby agree to exchange the designated B2B services/goods outlined above with zero cash consideration, maintaining equal parity under the TradeIt AI network charter and secured via a 2-of-2 multi-party Solana Anchor escrow account.
+                </p>
+              </div>
+
+              <div className="pt-6 border-t border-slate-200 grid grid-cols-2 gap-8 font-sans">
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">Signed for Party A</p>
+                  <p className="font-mono text-xs text-emerald-600 font-bold mt-1">Verified Signature ✓</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold">Signed for Party B</p>
+                  <p className="font-mono text-xs text-emerald-600 font-bold mt-1">Verified Signature ✓</p>
+                </div>
               </div>
             </div>
+
           </div>
         </div>
       )}
