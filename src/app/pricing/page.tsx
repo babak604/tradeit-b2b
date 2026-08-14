@@ -6,7 +6,7 @@ import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { 
   Check, ShieldCheck, X, CheckCircle2, Sparkles, CreditCard, 
-  Wallet, Coins, ArrowRight, Loader2, Building2, BadgeCheck, FileText 
+  Wallet, ArrowRight, Loader2, BadgeCheck, HelpCircle, Building2, User, Lock, Mail
 } from 'lucide-react';
 
 interface Plan {
@@ -16,165 +16,196 @@ interface Plan {
   annualPrice: number;
   description: string;
   features: string[];
+  ctaText: string;
+  badge?: string;
   highlighted: boolean;
 }
 
 export default function PricingPage() {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
-  const [activePlanId, setActivePlanId] = useState<string>('starter'); // Default free tier
-  const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
+  const [activePlanId, setActivePlanId] = useState<string>('free');
 
-  // Checkout Wizard State
-  const [checkoutStep, setCheckoutStep] = useState<number>(1);
-  const [companyName, setCompanyName] = useState<string>('');
-  const [dunsNumber, setDunsNumber] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'crypto' | 'barter'>('card');
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [membershipVaultPda, setMembershipVaultPda] = useState<string | null>(null);
+  // Registration & Checkout Modal State
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [regStep, setRegStep] = useState<1 | 2 | 3>(1);
+
+  // Form Fields
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [password, setPassword] = useState('');
+  const [paymentOption, setPaymentOption] = useState<'card' | 'crypto' | 'free'>('card');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const plans: Plan[] = [
     {
-      id: 'starter',
-      name: 'Starter Barter',
+      id: 'free',
+      name: 'Starter',
       monthlyPrice: 0,
       annualPrice: 0,
-      description: 'Ideal for independent creators, freelancers, and boutique service studios.',
+      description: 'Ideal for testing reciprocal trades and posting boutique service offers.',
       features: [
-        'Post up to 3 Active Trade Offers',
+        '3 Active Trade Offers',
         'Direct 2-Way Reciprocal Swaps',
-        'Standard AI Matcher Access',
-        'Basic Tax Accounting Export (CRA / IRS)',
-        'Standard Community Support'
+        'Standard AI Loop Matching',
+        'CRA / IRS Barter Tax Export',
+        'Community Support'
       ],
+      ctaText: 'Get Started Free',
       highlighted: false
     },
     {
-      id: 'growth',
-      name: 'Growth B2B',
-      monthlyPrice: 149,
-      annualPrice: 119,
-      description: 'Designed for growing SMBs looking to monetize surplus inventory & capacity.',
+      id: 'pro',
+      name: 'Pro B2B',
+      monthlyPrice: 129,
+      annualPrice: 99,
+      description: 'For growing SMBs looking to convert surplus inventory into purchasing power.',
       features: [
-        'Unlimited Active Trade Offers',
-        'Autonomous 3-Way & 4-Way Circular Loop Matching',
-        'Solana 2-of-2 Multi-Sig Escrow Vaults',
-        'Priority AI Agent Negotiation Engine',
-        'Full Tax & Audit Ledger Export',
-        'D-U-N-S Business Verification Badge'
+        'Unlimited Active Offers',
+        '3-Way & 4-Way Circular Loop Matching',
+        '2-of-2 Solana Multi-Sig Escrow',
+        'Priority Autonomous AI Agent Negotiator',
+        'D-U-N-S Verified Entity Badge',
+        'Full Tax Audit Ledger'
       ],
+      badge: 'MOST POPULAR',
+      ctaText: 'Start 14-Day Free Trial',
       highlighted: true
     },
     {
       id: 'enterprise',
-      name: 'Enterprise Network',
+      name: 'Enterprise',
       monthlyPrice: 499,
       annualPrice: 399,
-      description: 'Built for corporate procurement teams, logistics fleets, and institutional RWAs.',
+      description: 'For corporate procurement fleets, manufacturers, and institutional RWAs.',
       features: [
-        'All Growth Features Included',
-        'Full RWA Tokenization Studio & Token-2022 Access',
-        'Multi-Seat Team Governance & Approval Roles',
-        'Custom ERP & QuickBooks API Connectors',
-        'Dedicated Network Relationship Manager',
-        '0% Protocol Fee on High-Volume Reciprocal Swaps'
+        'Everything in Pro Included',
+        'Full RWA Tokenization Studio (Token-2022)',
+        'Multi-Seat Team Approvals & Roles',
+        'Custom ERP / QuickBooks Integrations',
+        'Dedicated Account Manager',
+        '0% Protocol Swap Fees'
       ],
+      ctaText: 'Get Started with Enterprise',
       highlighted: false
     }
   ];
 
-  const handleOpenCheckout = (plan: Plan) => {
-    if (plan.id === activePlanId) return;
-    setCheckoutPlan(plan);
-    setCheckoutStep(1);
+  const handleSelectPlan = (plan: Plan) => {
+    setSelectedPlan(plan);
+    setRegStep(1);
+    setPaymentOption(plan.monthlyPrice === 0 ? 'free' : 'card');
   };
 
-  const handleProcessSubscription = () => {
-    setIsProcessing(true);
-    setCheckoutStep(3);
+  const handleCompleteRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !companyName) return;
 
+    setIsSubmitting(true);
     setTimeout(() => {
-      const generatedPda = 'MEMBERSHIP_PDA_' + Math.random().toString(36).substring(2, 9).toUpperCase() + '_sol';
-      setMembershipVaultPda(generatedPda);
-      setIsProcessing(false);
-      setCheckoutStep(4);
-      if (checkoutPlan) {
-        setActivePlanId(checkoutPlan.id);
+      setIsSubmitting(false);
+      setRegStep(3);
+      if (selectedPlan) {
+        setActivePlanId(selectedPlan.id);
       }
-    }, 2200);
+    }, 1500);
   };
+
+  const faqs = [
+    {
+      q: 'How does tax accounting work for zero-cash barter?',
+      a: 'In Canada and the US, barter transactions are treated as taxable sales at fair market value (FMV). TradeIt automatically logs CRA T2125 / IRS Schedule C compliant ledgers for every completed deal.'
+    },
+    {
+      q: 'Can I cancel or change my plan anytime?',
+      a: 'Yes, you can upgrade, downgrade, or cancel your subscription at any time directly from your dashboard settings with zero penalty.'
+    },
+    {
+      q: 'How does 2-of-2 Multi-Sig Escrow protect my business?',
+      a: 'Funds or tokenized assets are locked on the Solana blockchain. Neither party can withdraw until both entities sign off on successful delivery.'
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-[#4a6370] text-slate-100 flex flex-col font-sans">
       
-      {/* SHARED UNIFIED HEADER */}
+      {/* GLOBAL HEADER */}
       <Header />
 
-      {/* MAIN CONTENT */}
-      <main className="max-w-[1300px] w-full mx-auto p-6 sm:p-12 space-y-12 flex-1">
+      {/* MAIN PRICING SECTION */}
+      <main className="max-w-[1250px] w-full mx-auto px-6 py-12 sm:py-16 space-y-16 flex-1">
         
-        {/* HERO */}
-        <div className="text-center space-y-4 max-w-2xl mx-auto">
+        {/* HEADER TITLE */}
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-400/10 border border-amber-400/30 rounded-full text-xs font-semibold text-amber-300">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Frictionless Reciprocal Membership Tiers</span>
+            <span>SIMPLE, TRANSPARENT B2B PRICING</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-white">Transparent B2B Membership</h1>
-          <p className="text-sm text-slate-200 leading-relaxed">
-            Trade surplus capacity with zero cash outlay. Choose the plan that best fits your business size and procurement requirements.
+
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
+            Predictable Plans for Modern Trade
+          </h1>
+
+          <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
+            Turn surplus capacity and overstock into purchasing power. Zero hidden fees.
           </p>
 
-          {/* MONTHLY / ANNUAL TOGGLE */}
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <span className={`text-xs font-medium ${billingCycle === 'monthly' ? 'text-white font-bold' : 'text-slate-300'}`}>Monthly</span>
+          {/* MONTHLY / ANNUAL SWITCH */}
+          <div className="pt-4 flex items-center justify-center gap-3">
+            <span className={`text-xs font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-300'}`}>Monthly Billing</span>
+            
             <button
               onClick={() => setBillingCycle((prev) => prev === 'monthly' ? 'annual' : 'monthly')}
               className="w-12 h-6 bg-[#2d404b] border border-white/20 rounded-full p-1 flex items-center cursor-pointer transition-all"
             >
-              <div className={`w-4 h-4 bg-amber-400 rounded-full transition-all transform ${billingCycle === 'annual' ? 'translate-x-6' : 'translate-x-0'}`} />
+              <div className={`w-4 h-4 bg-amber-400 rounded-full transition-transform duration-200 ${billingCycle === 'annual' ? 'translate-x-6' : 'translate-x-0'}`} />
             </button>
-            <span className={`text-xs font-medium flex items-center gap-1.5 ${billingCycle === 'annual' ? 'text-white font-bold' : 'text-slate-300'}`}>
-              Annual
-              <span className="text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-mono">Save 20%</span>
+
+            <span className={`text-xs font-bold flex items-center gap-1.5 ${billingCycle === 'annual' ? 'text-white' : 'text-slate-300'}`}>
+              Annual Billing
+              <span className="text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-mono">2 Months Free</span>
             </span>
           </div>
         </div>
 
-        {/* PRICING CARDS GRID */}
+        {/* PRICING CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan) => {
-            const isCurrentPlan = plan.id === activePlanId;
+            const isCurrent = plan.id === activePlanId;
             const price = billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice;
 
             return (
               <div
                 key={plan.id}
                 className={`rounded-3xl p-8 flex flex-col justify-between space-y-6 transition-all ${
-                  isCurrentPlan 
-                    ? 'bg-[#3b505d] border-2 border-emerald-400 shadow-2xl relative' 
+                  isCurrent 
+                    ? 'bg-[#3b505d] border-2 border-emerald-400 shadow-2xl relative'
                     : plan.highlighted 
                     ? 'bg-[#3b505d] border-2 border-amber-400 shadow-2xl relative scale-105' 
                     : 'bg-[#2d404b] border border-white/15'
                 }`}
               >
-                {isCurrentPlan ? (
+                {isCurrent && (
                   <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-emerald-500 text-white font-black text-[10px] uppercase px-4 py-1 rounded-full shadow-md font-mono flex items-center gap-1">
-                    <BadgeCheck className="w-3.5 h-3.5" /> CURRENT ACTIVE PLAN
+                    <BadgeCheck className="w-3.5 h-3.5" /> ACTIVE PLAN
                   </span>
-                ) : plan.highlighted ? (
+                )}
+
+                {!isCurrent && plan.badge && (
                   <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-[#334652] font-black text-[10px] uppercase px-4 py-1 rounded-full shadow-md font-mono">
-                    MOST POPULAR FOR SMBS
+                    {plan.badge}
                   </span>
-                ) : null}
+                )}
 
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-xl font-extrabold text-white">{plan.name}</h3>
-                    <p className="text-xs text-slate-300 mt-1">{plan.description}</p>
+                    <p className="text-xs text-slate-300 mt-1 min-h-[32px]">{plan.description}</p>
                   </div>
 
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-black text-white">${price}</span>
-                    <span className="text-xs text-slate-300 font-mono">/ {billingCycle === 'annual' ? 'month (billed annually)' : 'month'}</span>
+                    <span className="text-xs text-slate-300 font-mono">/ month {billingCycle === 'annual' && price > 0 ? '(billed yearly)' : ''}</span>
                   </div>
 
                   <div className="space-y-2.5 pt-4 border-t border-white/10 text-xs text-slate-200">
@@ -188,197 +219,198 @@ export default function PricingPage() {
                 </div>
 
                 <Button
-                  onClick={() => handleOpenCheckout(plan)}
-                  disabled={isCurrentPlan}
+                  onClick={() => handleSelectPlan(plan)}
+                  disabled={isCurrent}
                   className={`w-full py-3.5 rounded-full font-extrabold text-xs cursor-pointer shadow-lg transition-all ${
-                    isCurrentPlan
-                      ? 'bg-emerald-900/60 text-emerald-200 border border-emerald-400/40 opacity-90 cursor-default'
+                    isCurrent
+                      ? 'bg-emerald-900/60 text-emerald-200 border border-emerald-400/40 cursor-default'
                       : plan.highlighted
                       ? 'bg-white text-[#334652] hover:bg-slate-100'
                       : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
                   }`}
                 >
-                  {isCurrentPlan ? 'Active Membership Tier' : plan.monthlyPrice === 0 ? 'Select Free Tier' : `Subscribe to ${plan.name}`}
+                  {isCurrent ? 'Your Active Plan' : plan.ctaText}
                 </Button>
               </div>
             );
           })}
         </div>
 
-        {/* TAX & COMPLIANCE FOOTNOTE */}
-        <div className="p-6 rounded-3xl bg-[#2d404b] border border-white/15 flex items-center justify-start gap-3 text-xs font-mono text-slate-200">
-          <ShieldCheck className="w-6 h-6 text-amber-400 shrink-0" />
-          <span>Tax Compliant: Automatic non-cash barter ledger exports (CRA T2125 / IRS Schedule C).</span>
+        {/* FAQ ACCORDION / GRID */}
+        <div className="pt-12 border-t border-white/10 space-y-8">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-extrabold text-white flex items-center justify-center gap-2">
+              <HelpCircle className="w-5 h-5 text-amber-400" />
+              <span>Frequently Asked Questions</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {faqs.map((faq, idx) => (
+              <div key={idx} className="p-6 rounded-2xl bg-[#2d404b] border border-white/10 space-y-2">
+                <h4 className="font-bold text-xs text-white leading-snug">{faq.q}</h4>
+                <p className="text-xs text-slate-300 leading-relaxed">{faq.a}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
       </main>
 
-      {/* FULL WORKING CHECKOUT & MEMBERSHIP WIZARD MODAL */}
-      {checkoutPlan && (
+      {/* FAST WORKING REGISTRATION MODAL */}
+      {selectedPlan && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#2d404b] border border-white/20 w-full max-w-lg rounded-3xl p-6 sm:p-8 space-y-6 text-slate-100 shadow-2xl relative animate-in zoom-in-95 duration-200">
+          <div className="bg-[#2d404b] border border-white/20 w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-5 text-slate-100 shadow-2xl relative animate-in zoom-in-95 duration-200">
             
             <button 
-              onClick={() => setCheckoutPlan(null)} 
+              onClick={() => setSelectedPlan(null)} 
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-full cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* STEP 1: BUSINESS IDENTITY */}
-            {checkoutStep === 1 && (
-              <div className="space-y-5">
+            {regStep === 1 && (
+              <form onSubmit={(e) => { e.preventDefault(); setRegStep(2); }} className="space-y-4">
                 <div className="space-y-1">
-                  <div className="text-xs font-mono text-amber-300 font-bold">STEP 1 OF 3 • IDENTITY VERIFICATION</div>
-                  <h3 className="text-xl font-black text-white">Subscribe to {checkoutPlan.name}</h3>
-                  <p className="text-xs text-slate-300">
-                    Set up your enterprise verification profile for reciprocal trade clearance.
-                  </p>
+                  <span className="text-[10px] font-mono text-amber-300 uppercase font-bold">STEP 1 OF 2 • CREATE ACCOUNT</span>
+                  <h3 className="text-xl font-extrabold text-white">Join on {selectedPlan.name}</h3>
+                  <p className="text-xs text-slate-300">Enter your business details to unlock reciprocal trading.</p>
                 </div>
 
                 <div className="space-y-3 text-xs">
                   <div>
-                    <label className="block text-slate-200 mb-1 font-medium">Registered Business or Studio Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Easy Mondays Apparel or Montreal Creative"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full bg-[#3a4f5c] border border-white/20 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white"
-                    />
+                    <label className="block text-slate-200 mb-1 font-medium">Business / Entity Name</label>
+                    <div className="flex items-center gap-2 bg-[#3a4f5c] border border-white/20 rounded-xl px-3 py-2.5">
+                      <Building2 className="w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Easy Mondays Apparel"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="bg-transparent text-white w-full focus:outline-none"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-200 mb-1 font-medium">D-U-N-S or Business Tax ID (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. D-U-N-S #8849201"
-                      value={dunsNumber}
-                      onChange={(e) => setDunsNumber(e.target.value)}
-                      className="w-full bg-[#3a4f5c] border border-white/20 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white font-mono"
-                    />
+                    <label className="block text-slate-200 mb-1 font-medium">Work Email Address</label>
+                    <div className="flex items-center gap-2 bg-[#3a4f5c] border border-white/20 rounded-xl px-3 py-2.5">
+                      <Mail className="w-4 h-4 text-slate-400" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="you@company.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="bg-transparent text-white w-full focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-200 mb-1 font-medium">Password</label>
+                    <div className="flex items-center gap-2 bg-[#3a4f5c] border border-white/20 rounded-xl px-3 py-2.5">
+                      <Lock className="w-4 h-4 text-slate-400" />
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="bg-transparent text-white w-full focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <Button
-                  onClick={() => setCheckoutStep(2)}
-                  disabled={!companyName.trim()}
-                  className="w-full bg-white hover:bg-slate-100 text-[#334652] font-extrabold text-xs py-3 rounded-full shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  type="submit"
+                  className="w-full bg-white hover:bg-slate-100 text-[#334652] font-extrabold text-xs py-3 rounded-full shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
                 >
-                  <span>Continue to Payment & Staking</span>
+                  <span>Continue to Activation</span>
                   <ArrowRight className="w-4 h-4" />
                 </Button>
-              </div>
+              </form>
             )}
 
-            {/* STEP 2: PAYMENT METHOD */}
-            {checkoutStep === 2 && (
-              <div className="space-y-5">
+            {regStep === 2 && (
+              <form onSubmit={handleCompleteRegister} className="space-y-4">
                 <div className="space-y-1">
-                  <div className="text-xs font-mono text-amber-300 font-bold">STEP 2 OF 3 • SETTLEMENT METHOD</div>
-                  <h3 className="text-xl font-black text-white">Select Payment Preference</h3>
-                  <p className="text-xs text-slate-300">Choose how your membership plan is settled monthly.</p>
+                  <span className="text-[10px] font-mono text-amber-300 uppercase font-bold">STEP 2 OF 2 • ACTIVATION</span>
+                  <h3 className="text-xl font-extrabold text-white">Select Billing Option</h3>
+                  <p className="text-xs text-slate-300">Confirm payment method for {selectedPlan.name}.</p>
                 </div>
 
-                <div className="space-y-2 text-xs">
-                  <div 
-                    onClick={() => setPaymentMethod('card')}
-                    className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between ${paymentMethod === 'card' ? 'bg-[#3a4f5c] border-amber-400' : 'bg-[#24343e] border-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <CreditCard className="w-5 h-5 text-amber-400" />
-                      <div>
-                        <div className="font-bold text-white">Corporate Credit Card / ACH</div>
-                        <div className="text-[10px] text-slate-300">Stripe Billing (${checkoutPlan.monthlyPrice}/mo)</div>
-                      </div>
-                    </div>
-                    <input type="radio" checked={paymentMethod === 'card'} readOnly className="accent-amber-400" />
+                {selectedPlan.monthlyPrice === 0 ? (
+                  <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-400/30 text-xs text-emerald-200 space-y-1">
+                    <p className="font-bold">✓ Free Tier Selected</p>
+                    <p className="text-[11px] opacity-80">No credit card or cash required. Instant trade feed access.</p>
                   </div>
-
-                  <div 
-                    onClick={() => setPaymentMethod('crypto')}
-                    className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between ${paymentMethod === 'crypto' ? 'bg-[#3a4f5c] border-amber-400' : 'bg-[#24343e] border-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Wallet className="w-5 h-5 text-amber-400" />
-                      <div>
-                        <div className="font-bold text-white">Solana USDC Wallet Direct</div>
-                        <div className="text-[10px] text-slate-300">Pay directly from connected Solana Devnet keypair</div>
+                ) : (
+                  <div className="space-y-2 text-xs">
+                    <div 
+                      onClick={() => setPaymentOption('card')}
+                      className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between ${paymentOption === 'card' ? 'bg-[#3a4f5c] border-amber-400' : 'bg-[#24343e] border-white/10'}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <CreditCard className="w-4 h-4 text-amber-400" />
+                        <span>Corporate Card (${billingCycle === 'annual' ? selectedPlan.annualPrice : selectedPlan.monthlyPrice}/mo)</span>
                       </div>
+                      <input type="radio" checked={paymentOption === 'card'} readOnly className="accent-amber-400" />
                     </div>
-                    <input type="radio" checked={paymentMethod === 'crypto'} readOnly className="accent-amber-400" />
-                  </div>
 
-                  <div 
-                    onClick={() => setPaymentMethod('barter')}
-                    className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between ${paymentMethod === 'barter' ? 'bg-[#3a4f5c] border-amber-400' : 'bg-[#24343e] border-white/10'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Coins className="w-5 h-5 text-amber-400" />
-                      <div>
-                        <div className="font-bold text-white">Non-Cash Barter Credit Stake</div>
-                        <div className="text-[10px] text-slate-300">Offset using accrued Trade Credit liquidity</div>
+                    <div 
+                      onClick={() => setPaymentOption('crypto')}
+                      className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between ${paymentOption === 'crypto' ? 'bg-[#3a4f5c] border-amber-400' : 'bg-[#24343e] border-white/10'}`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Wallet className="w-4 h-4 text-amber-400" />
+                        <span>Solana USDC Keypair</span>
                       </div>
+                      <input type="radio" checked={paymentOption === 'crypto'} readOnly className="accent-amber-400" />
                     </div>
-                    <input type="radio" checked={paymentMethod === 'barter'} readOnly className="accent-amber-400" />
                   </div>
-                </div>
+                )}
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-2">
                   <button 
-                    onClick={() => setCheckoutStep(1)} 
-                    className="px-4 py-2.5 text-xs text-slate-300 hover:text-white font-medium"
+                    type="button"
+                    onClick={() => setRegStep(1)} 
+                    className="px-4 py-2.5 text-xs text-slate-300 hover:text-white font-medium cursor-pointer"
                   >
                     Back
                   </button>
                   <Button
-                    onClick={handleProcessSubscription}
-                    className="flex-1 bg-white hover:bg-slate-100 text-[#334652] font-extrabold text-xs py-3 rounded-full shadow-md cursor-pointer"
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 bg-white hover:bg-slate-100 text-[#334652] font-extrabold text-xs py-3 rounded-full shadow-md cursor-pointer flex items-center justify-center gap-2"
                   >
-                    Confirm & Activate Membership
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Complete Registration & Activate</span>}
                   </Button>
                 </div>
-              </div>
+              </form>
             )}
 
-            {/* STEP 3: PROCESSING SIMULATION */}
-            {checkoutStep === 3 && (
-              <div className="py-8 space-y-4 text-center">
-                <Loader2 className="w-10 h-10 animate-spin text-amber-400 mx-auto" />
-                <div className="space-y-1">
-                  <h3 className="font-extrabold text-white text-base">Provisioning Solana Multi-Sig Vault...</h3>
-                  <p className="text-xs text-slate-300 font-mono">Minting non-fungible membership PDA key on Devnet...</p>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 4: SUCCESS CONFIRMATION */}
-            {checkoutStep === 4 && (
-              <div className="space-y-5 text-center">
+            {regStep === 3 && (
+              <div className="py-4 space-y-4 text-center">
                 <div className="p-3 bg-emerald-900/60 rounded-full w-12 h-12 mx-auto flex items-center justify-center border border-emerald-400/40">
                   <CheckCircle2 className="w-6 h-6 text-emerald-300" />
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-xl font-black text-white">{checkoutPlan.name} Activated!</h3>
+                  <h3 className="text-xl font-black text-white">{selectedPlan.name} Plan Active!</h3>
                   <p className="text-xs text-slate-300">
-                    Welcome <strong className="text-white">{companyName}</strong>. Your reciprocal trade permissions are now live.
+                    Welcome <strong className="text-white">{companyName}</strong>. Your reciprocal trading permissions are officially enabled.
                   </p>
-                </div>
-
-                <div className="bg-[#24343e] p-4 rounded-2xl border border-white/10 text-xs font-mono space-y-2 text-left">
-                  <div className="flex justify-between"><span className="text-slate-400">Company:</span> <span className="text-white font-bold">{companyName}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Membership Tier:</span> <span className="text-amber-300 font-bold uppercase">{checkoutPlan.name}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Membership PDA:</span> <span className="text-emerald-300">{membershipVaultPda}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Tax Logging:</span> <span>Active (CRA T2125 / IRS Schedule C)</span></div>
                 </div>
 
                 <Link href="/">
                   <Button
-                    onClick={() => setCheckoutPlan(null)}
+                    onClick={() => setSelectedPlan(null)}
                     className="w-full bg-white hover:bg-slate-100 text-[#334652] font-extrabold text-xs py-3 rounded-full shadow-md cursor-pointer mt-2"
                   >
-                    Launch Trading Dashboard
+                    Go to Trading Dashboard
                   </Button>
                 </Link>
               </div>
@@ -390,7 +422,7 @@ export default function PricingPage() {
 
       {/* FOOTER */}
       <footer className="border-t border-white/10 bg-[#24333b] py-6 px-6 text-xs text-slate-300 flex items-center justify-between">
-        <div><strong>TradeIt Membership Engine</strong> • Solana 2-of-2 Escrow Compliant</div>
+        <div><strong>TradeIt B2B Network</strong> • Zero-Cash Reciprocal Exchange</div>
         <Link href="/" className="hover:text-white">Back to Dashboard</Link>
       </footer>
 
