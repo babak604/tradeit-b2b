@@ -17,9 +17,6 @@ export interface DealHistoryRecord {
   created_at?: string;
 }
 
-/**
- * Fetch past deal transaction records from Supabase
- */
 export async function fetchDealHistory(): Promise<DealHistoryRecord[]> {
   try {
     const { data, error } = await supabase
@@ -39,9 +36,6 @@ export async function fetchDealHistory(): Promise<DealHistoryRecord[]> {
   }
 }
 
-/**
- * Subscribe to real-time inserts on the deal_history table
- */
 export function subscribeToDealHistory(callback: (record: DealHistoryRecord) => void) {
   const channel = supabase
     .channel("public:deal_history")
@@ -61,9 +55,6 @@ export function subscribeToDealHistory(callback: (record: DealHistoryRecord) => 
   };
 }
 
-/**
- * Log a new transaction event to Supabase & auto-sync deal status
- */
 export async function logDealTransaction(payload: {
   dealId: string;
   eventType: string;
@@ -74,7 +65,6 @@ export async function logDealTransaction(payload: {
   amount?: number;
 }) {
   try {
-    // 1. Log transaction to audit trail
     const { error: historyError } = await supabase.from("deal_history").insert([
       {
         deal_id: payload.dealId,
@@ -91,7 +81,6 @@ export async function logDealTransaction(payload: {
       console.error("Error logging deal transaction to Supabase:", historyError.message);
     }
 
-    // 2. Map event to deal status & attempt sync
     let dealStatus = "";
     if (payload.eventType === "INITIALIZE") dealStatus = "ESCROW_INITIALIZED";
     if (payload.eventType === "DEPOSIT") dealStatus = "ESCROW_FUNDED";

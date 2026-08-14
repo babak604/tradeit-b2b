@@ -11,7 +11,6 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-12">
       <div className="mx-auto max-w-5xl space-y-8">
-        {/* Top Breadcrumb & Actions */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <Link href="/escrow" className="text-xs font-semibold text-teal-400 hover:underline flex items-center gap-1">
             ← Back to Escrow Terminal
@@ -21,7 +20,6 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
           </span>
         </div>
 
-        {/* Main Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">
             B2B Trade Deal Overview
@@ -32,7 +30,6 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
-          {/* Left Column: Deal Metadata & Info */}
           <div className="lg:col-span-2 space-y-6">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-xl space-y-4">
               <h2 className="text-lg font-bold text-slate-200">Contract Summary</h2>
@@ -62,7 +59,6 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          {/* Right Column: Embedded Escrow Widget */}
           <div className="lg:col-span-1">
             <EscrowDealWidget dealId={dealId} title="Live Escrow Status" />
           </div>
