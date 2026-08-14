@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Header from '@/components/Header';
 import { 
-  Coins, FileCheck, KeyRound, Loader2, ArrowLeft, 
+  Coins, FileCheck, KeyRound, Loader2, 
   Layers, Building2, Truck, Package, Wheat, FileText
 } from 'lucide-react';
 
@@ -51,26 +52,18 @@ export default function RwaStudioPage() {
   return (
     <div className="min-h-screen bg-[#4a6370] text-slate-100 flex flex-col font-sans">
       
-      {/* HEADER */}
-      <header className="border-b border-white/10 bg-[#425965]/90 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center space-x-4">
-          <Link href="/" className="flex items-center gap-2 text-xs text-slate-200 hover:text-white font-bold">
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Dashboard</span>
-          </Link>
-        </div>
-
-        <div className="font-extrabold text-sm tracking-wide text-white flex items-center gap-2">
-          <Coins className="w-4 h-4 text-amber-400" />
-          <span>RWA TOKENIZATION & PROVENANCE STUDIO</span>
-        </div>
-      </header>
+      {/* SHARED UNIFIED HEADER */}
+      <Header />
 
       {/* MAIN CONTENT */}
       <main className="max-w-[1300px] w-full mx-auto p-6 sm:p-10 space-y-12 flex-1">
         
         {/* HERO */}
         <div className="space-y-3 text-center sm:text-left">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-400/10 border border-amber-400/30 rounded-full text-xs font-semibold text-amber-300">
+            <Coins className="w-3.5 h-3.5 text-amber-400" />
+            <span>Institutional Asset Provenance</span>
+          </div>
           <h1 className="text-3xl sm:text-5xl font-black text-white">Institutional Asset Tokenization</h1>
           <p className="text-sm text-slate-200 max-w-2xl leading-relaxed">
             Transform physical commercial assets into compliant, on-chain Solana Token-2022 digital assets. Use tokenized RWAs as collateral or parity backing in 2-of-2 trade escrows.
@@ -117,7 +110,7 @@ export default function RwaStudioPage() {
                   type="number"
                   value={assetValuation}
                   onChange={(e) => setAssetValuation(Number(e.target.value))}
-                  className="w-full rounded-xl bg-[#2d404b] border border-white/20 p-3 text-white font-mono focus:outline-none"
+                  className="w-full rounded-xl bg-[#2d404b] border border-white/20 p-3 text-white font-mono focus:outline-none font-bold"
                 />
               </div>
 
@@ -127,7 +120,7 @@ export default function RwaStudioPage() {
                   type="number"
                   value={fractionalShares}
                   onChange={(e) => setFractionalShares(Number(e.target.value))}
-                  className="w-full rounded-xl bg-[#2d404b] border border-white/20 p-3 text-white font-mono focus:outline-none"
+                  className="w-full rounded-xl bg-[#2d404b] border border-white/20 p-3 text-white font-mono focus:outline-none font-bold"
                 />
               </div>
             </div>

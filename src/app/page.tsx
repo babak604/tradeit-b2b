@@ -3,22 +3,17 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { 
-  Tornado, Plus, ShieldCheck, Send, ArrowLeftRight, 
-  UserCheck, LogIn, Bot, Loader2, ArrowRight, 
-  Zap, RefreshCw, Sparkles, ChevronRight
+  ShieldCheck, Send, ArrowLeftRight, Loader2, ArrowRight, 
+  Zap, RefreshCw, Sparkles, ChevronRight, Bot
 } from 'lucide-react';
-
-const PitchUpload = dynamic(() => import('@/components/PitchUpload'), { ssr: false });
-const AuthModal = dynamic(() => import('@/components/AuthModal'), { ssr: false });
 
 export default function MasterDashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   // Active Loop Visualization State
   const [activeLoopType, setActiveLoopType] = useState<'2way' | '3way' | '4way'>('3way');
@@ -68,52 +63,8 @@ export default function MasterDashboardPage() {
   return (
     <div className="min-h-screen bg-[#4a6370] text-slate-100 flex flex-col font-sans">
       
-      {/* HEADER NAVIGATION */}
-      <header className="border-b border-white/10 bg-[#425965]/90 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center space-x-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="p-2 bg-white/10 rounded-2xl border border-white/20">
-              <Tornado className="w-5 h-5 text-amber-400" />
-            </div>
-            <span className="font-extrabold text-lg tracking-wider text-white">
-              TRADEIT <span className="text-xs font-mono text-amber-300 px-2 py-0.5 bg-amber-400/10 border border-amber-400/30 rounded-full ml-1 font-bold">B2B NETWORK</span>
-            </span>
-          </Link>
-
-          <nav className="hidden md:flex items-center space-x-6 text-xs font-medium text-slate-200">
-            <a href="#how-it-works" className="hover:text-amber-300 transition-colors">How It Works</a>
-            <a href="#circular-tech" className="hover:text-amber-300 transition-colors">Circular Tech</a>
-            <Link href="/rwa" className="hover:text-amber-300 transition-colors">RWA Studio</Link>
-            <Link href="/pricing" className="hover:text-amber-300 transition-colors">Pricing</Link>
-            <a href="#demo-terminal" className="hover:text-amber-300 transition-colors">Interactive Demo</a>
-          </nav>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {currentUser ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-900/40 border border-emerald-400/30 rounded-full text-xs font-medium text-emerald-200">
-              <UserCheck className="w-3.5 h-3.5" />
-              <span className="truncate max-w-[120px]">{currentUser}</span>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsAuthOpen(true)}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-xs rounded-full font-bold cursor-pointer transition-all flex items-center gap-1.5"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Login</span>
-            </button>
-          )}
-
-          <Button
-            onClick={() => setIsUploadOpen(true)}
-            className="bg-white text-[#334652] hover:bg-slate-100 font-extrabold text-xs px-5 h-9 rounded-full shadow-lg flex items-center gap-1.5 cursor-pointer transition-all"
-          >
-            <Plus className="w-4 h-4 text-[#334652]" />
-            <span>Post Trade Offer</span>
-          </Button>
-        </div>
-      </header>
+      {/* SHARED UNIFIED HEADER */}
+      <Header />
 
       {/* HERO SECTION */}
       <section className="relative pt-16 pb-20 px-6 max-w-[1400px] mx-auto w-full text-center space-y-6">
@@ -420,10 +371,6 @@ export default function MasterDashboardPage() {
           <a href="https://explorer.solana.com" target="_blank" rel="noreferrer" className="hover:text-white">Solana Explorer ↗</a>
         </div>
       </footer>
-
-      {/* MODALS */}
-      <PitchUpload isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} onUploadSuccess={() => window.location.reload()} />
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onAuthSuccess={(email) => { setCurrentUser(email); setIsAuthOpen(false); }} />
 
     </div>
   );
