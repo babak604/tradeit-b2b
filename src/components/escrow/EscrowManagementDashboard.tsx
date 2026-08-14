@@ -14,7 +14,7 @@ import {
 } from "@/lib/supabase/dealHistory";
 
 export function EscrowManagementDashboard() {
-  const { connected, publicKey } = useWallet();
+  const { connected } = useWallet();
   const {
     mintMockRwaTokens,
     initializeEscrow,
@@ -24,6 +24,12 @@ export function EscrowManagementDashboard() {
     loading,
     error,
   } = useTradeItEscrow();
+
+  // SSR Hydration Mount Check
+  const [mounted, setMounted] = useState<boolean>(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Active Tab State
   const [activeTab, setActiveTab] = useState<"init" | "deposit" | "settle" | "inspect">("init");
@@ -128,7 +134,7 @@ export function EscrowManagementDashboard() {
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-6">
       {/* Network Warning Guardrail */}
-      <NetworkWarningBanner />
+      {mounted && <NetworkWarningBanner />}
 
       {/* Header & Wallet Section */}
       <div className="flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl backdrop-blur-xl md:flex-row md:items-center md:justify-between">
@@ -141,12 +147,16 @@ export function EscrowManagementDashboard() {
           </p>
         </div>
         <div>
-          <WalletMultiButton />
+          {mounted ? (
+            <WalletMultiButton />
+          ) : (
+            <div className="h-10 w-36 rounded-xl bg-slate-800 animate-pulse" />
+          )}
         </div>
       </div>
 
       {/* Mock RWA Faucet Banner */}
-      {connected && (
+      {mounted && connected && (
         <div className="rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-900/30 via-slate-900 to-purple-900/30 p-5 shadow-lg">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

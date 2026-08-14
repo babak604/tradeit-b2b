@@ -13,7 +13,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - static image/asset extensions (.svg, .png, .jpg, etc.)
+     * - public Web3 routes (/escrow, /deals)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|escrow|deals|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
