@@ -6,15 +6,17 @@ import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { 
   Check, ShieldCheck, X, CheckCircle2, Sparkles, CreditCard, 
-  Wallet, ArrowRight, Loader2, BadgeCheck, HelpCircle, Building2, User, Lock, Mail
+  Wallet, ArrowRight, Loader2, BadgeCheck, HelpCircle, Building2, 
+  User, Lock, Mail, Briefcase, Code, Terminal, Globe
 } from 'lucide-react';
 
 interface Plan {
   id: string;
   name: string;
-  monthlyPrice: number;
   annualPrice: number;
+  monthlyEquivalent: number;
   description: string;
+  targetUser: string;
   features: string[];
   ctaText: string;
   badge?: string;
@@ -22,71 +24,75 @@ interface Plan {
 }
 
 export default function PricingPage() {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
-  const [activePlanId, setActivePlanId] = useState<string>('free');
+  const [activePlanId, setActivePlanId] = useState<string>('freelancer');
 
-  // Registration & Checkout Modal State
+  // Registration & Activation Modal State
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [regStep, setRegStep] = useState<1 | 2 | 3>(1);
 
   // Form Fields
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [companyName, setCompanyName] = useState('');
+  const [companyOrStudio, setCompanyOrStudio] = useState('');
+  const [skillOrCategory, setSkillOrCategory] = useState('');
   const [password, setPassword] = useState('');
-  const [paymentOption, setPaymentOption] = useState<'card' | 'crypto' | 'free'>('card');
+  const [paymentOption, setPaymentOption] = useState<'free' | 'card' | 'crypto'>('free');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const plans: Plan[] = [
     {
-      id: 'free',
-      name: 'Starter',
-      monthlyPrice: 0,
+      id: 'freelancer',
+      name: 'Freelancer & Solo',
       annualPrice: 0,
-      description: 'Ideal for testing reciprocal trades and posting boutique service offers.',
+      monthlyEquivalent: 0,
+      description: 'Built for independent developers, designers, video creators, and solo consultants.',
+      targetUser: 'Freelancers & Studios',
       features: [
-        '3 Active Trade Offers',
+        'Trade Skill Hours & Portfolio Services',
+        '3 Active Reciprocal Listings',
         'Direct 2-Way Reciprocal Swaps',
-        'Standard AI Loop Matching',
-        'CRA / IRS Barter Tax Export',
-        'Community Support'
+        'Standard AI Trade Matcher Access',
+        'CRA T2125 / IRS Barter Tax Export',
+        'Solana Devnet Wallet Setup'
       ],
-      ctaText: 'Get Started Free',
+      ctaText: 'Activate Freelancer Membership',
       highlighted: false
     },
     {
       id: 'pro',
       name: 'Pro B2B',
-      monthlyPrice: 129,
-      annualPrice: 99,
-      description: 'For growing SMBs looking to convert surplus inventory into purchasing power.',
+      annualPrice: 1188,
+      monthlyEquivalent: 99,
+      description: 'For growing SMBs and agencies converting surplus inventory and team capacity into purchasing power.',
+      targetUser: 'Growing SMBs & Agencies',
       features: [
-        'Unlimited Active Offers',
-        '3-Way & 4-Way Circular Loop Matching',
-        '2-of-2 Solana Multi-Sig Escrow',
-        'Priority Autonomous AI Agent Negotiator',
+        'Unlimited Active Trade Offers',
+        'Autonomous 3-Way & 4-Way Circular Loops',
+        '2-of-2 Solana Multi-Sig Escrow Vaults',
+        'Priority Autonomous AI Negotiator Agent',
         'D-U-N-S Verified Entity Badge',
-        'Full Tax Audit Ledger'
+        'Full Audit Ledger Export'
       ],
-      badge: 'MOST POPULAR',
-      ctaText: 'Start 14-Day Free Trial',
+      badge: 'MOST POPULAR FOR SMBS',
+      ctaText: 'Start Pro B2B Membership',
       highlighted: true
     },
     {
       id: 'enterprise',
-      name: 'Enterprise',
-      monthlyPrice: 499,
-      annualPrice: 399,
-      description: 'For corporate procurement fleets, manufacturers, and institutional RWAs.',
+      name: 'Enterprise Network',
+      annualPrice: 4788,
+      monthlyEquivalent: 399,
+      description: 'For corporate procurement, manufacturing overstock, and institutional RWA asset tokenization.',
+      targetUser: 'Corporations & RWAs',
       features: [
-        'Everything in Pro Included',
+        'All Pro B2B Features Included',
         'Full RWA Tokenization Studio (Token-2022)',
         'Multi-Seat Team Approvals & Roles',
-        'Custom ERP / QuickBooks Integrations',
+        'Custom ERP & QuickBooks API Connectors',
         'Dedicated Account Manager',
         '0% Protocol Swap Fees'
       ],
-      ctaText: 'Get Started with Enterprise',
+      ctaText: 'Activate Enterprise Network',
       highlighted: false
     }
   ];
@@ -94,12 +100,12 @@ export default function PricingPage() {
   const handleSelectPlan = (plan: Plan) => {
     setSelectedPlan(plan);
     setRegStep(1);
-    setPaymentOption(plan.monthlyPrice === 0 ? 'free' : 'card');
+    setPaymentOption(plan.annualPrice === 0 ? 'free' : 'card');
   };
 
   const handleCompleteRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !companyName) return;
+    if (!email || !companyOrStudio) return;
 
     setIsSubmitting(true);
     setTimeout(() => {
@@ -108,21 +114,21 @@ export default function PricingPage() {
       if (selectedPlan) {
         setActivePlanId(selectedPlan.id);
       }
-    }, 1500);
+    }, 1400);
   };
 
   const faqs = [
     {
-      q: 'How does tax accounting work for zero-cash barter?',
-      a: 'In Canada and the US, barter transactions are treated as taxable sales at fair market value (FMV). TradeIt automatically logs CRA T2125 / IRS Schedule C compliant ledgers for every completed deal.'
+      q: 'Are all memberships billed annually?',
+      a: 'Yes. All TradeIt B2B plans are annual memberships to ensure stable network liquidity, multi-sig vault security, and seamless CRA/IRS barter tax reporting throughout the fiscal year.'
     },
     {
-      q: 'Can I cancel or change my plan anytime?',
-      a: 'Yes, you can upgrade, downgrade, or cancel your subscription at any time directly from your dashboard settings with zero penalty.'
+      q: 'How does the Freelancer tier work?',
+      a: 'Freelancers can list their billable service hours (e.g., Web Development, 4K Video Editing, Design) in exchange for physical surplus or services from other businesses without spending cash.'
     },
     {
-      q: 'How does 2-of-2 Multi-Sig Escrow protect my business?',
-      a: 'Funds or tokenized assets are locked on the Solana blockchain. Neither party can withdraw until both entities sign off on successful delivery.'
+      q: 'How does 2-of-2 Multi-Sig Escrow protect my trades?',
+      a: 'Every deal creates a dedicated vault on the Solana blockchain. Deliverables or assets are held safely until both parties sign off on fulfillment.'
     }
   ];
 
@@ -139,40 +145,22 @@ export default function PricingPage() {
         <div className="text-center space-y-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-400/10 border border-amber-400/30 rounded-full text-xs font-semibold text-amber-300">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>SIMPLE, TRANSPARENT B2B PRICING</span>
+            <span>ANNUAL B2B MEMBERSHIPS ONLY</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
-            Predictable Plans for Modern Trade
+            Reciprocal Trade Memberships
           </h1>
 
           <p className="text-sm sm:text-base text-slate-200 leading-relaxed">
-            Turn surplus capacity and overstock into purchasing power. Zero hidden fees.
+            Turn unbilled hours, service capacity, and surplus inventory into direct purchasing power. Guaranteed annual network liquidity.
           </p>
-
-          {/* MONTHLY / ANNUAL SWITCH */}
-          <div className="pt-4 flex items-center justify-center gap-3">
-            <span className={`text-xs font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-300'}`}>Monthly Billing</span>
-            
-            <button
-              onClick={() => setBillingCycle((prev) => prev === 'monthly' ? 'annual' : 'monthly')}
-              className="w-12 h-6 bg-[#2d404b] border border-white/20 rounded-full p-1 flex items-center cursor-pointer transition-all"
-            >
-              <div className={`w-4 h-4 bg-amber-400 rounded-full transition-transform duration-200 ${billingCycle === 'annual' ? 'translate-x-6' : 'translate-x-0'}`} />
-            </button>
-
-            <span className={`text-xs font-bold flex items-center gap-1.5 ${billingCycle === 'annual' ? 'text-white' : 'text-slate-300'}`}>
-              Annual Billing
-              <span className="text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full font-mono">2 Months Free</span>
-            </span>
-          </div>
         </div>
 
         {/* PRICING CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan) => {
             const isCurrent = plan.id === activePlanId;
-            const price = billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice;
 
             return (
               <div
@@ -199,16 +187,24 @@ export default function PricingPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-xl font-extrabold text-white">{plan.name}</h3>
+                    <span className="text-[10px] font-mono text-amber-300 uppercase tracking-wider font-bold">{plan.targetUser}</span>
+                    <h3 className="text-xl font-extrabold text-white mt-0.5">{plan.name}</h3>
                     <p className="text-xs text-slate-300 mt-1 min-h-[32px]">{plan.description}</p>
                   </div>
 
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-white">${price}</span>
-                    <span className="text-xs text-slate-300 font-mono">/ month {billingCycle === 'annual' && price > 0 ? '(billed yearly)' : ''}</span>
+                  <div className="flex items-baseline gap-1.5 border-b border-white/10 pb-4">
+                    {plan.annualPrice === 0 ? (
+                      <span className="text-4xl font-black text-white">$0 <span className="text-xs text-slate-300 font-mono font-normal">/ year</span></span>
+                    ) : (
+                      <div>
+                        <span className="text-4xl font-black text-white">${plan.annualPrice.toLocaleString()}</span>
+                        <span className="text-xs text-slate-300 font-mono font-normal"> / year</span>
+                        <p className="text-[11px] text-amber-300 font-mono mt-0.5">(${plan.monthlyEquivalent}/mo billed annually)</p>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="space-y-2.5 pt-4 border-t border-white/10 text-xs text-slate-200">
+                  <div className="space-y-2.5 text-xs text-slate-200 pt-2">
                     {plan.features.map((feat, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
@@ -236,7 +232,7 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* FAQ ACCORDION / GRID */}
+        {/* FAQ SECTION */}
         <div className="pt-12 border-t border-white/10 space-y-8">
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-extrabold text-white flex items-center justify-center gap-2">
@@ -257,7 +253,7 @@ export default function PricingPage() {
 
       </main>
 
-      {/* FAST WORKING REGISTRATION MODAL */}
+      {/* REGISTRATION & ACTIVATION MODAL */}
       {selectedPlan && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#2d404b] border border-white/20 w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-5 text-slate-100 shadow-2xl relative animate-in zoom-in-95 duration-200">
@@ -272,22 +268,56 @@ export default function PricingPage() {
             {regStep === 1 && (
               <form onSubmit={(e) => { e.preventDefault(); setRegStep(2); }} className="space-y-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono text-amber-300 uppercase font-bold">STEP 1 OF 2 • CREATE ACCOUNT</span>
-                  <h3 className="text-xl font-extrabold text-white">Join on {selectedPlan.name}</h3>
-                  <p className="text-xs text-slate-300">Enter your business details to unlock reciprocal trading.</p>
+                  <span className="text-[10px] font-mono text-amber-300 uppercase font-bold">STEP 1 OF 2 • PROFILE REGISTRATION</span>
+                  <h3 className="text-xl font-extrabold text-white">{selectedPlan.name} Signup</h3>
+                  <p className="text-xs text-slate-300">Set up your trade entity details to begin reciprocal trading.</p>
                 </div>
 
                 <div className="space-y-3 text-xs">
                   <div>
-                    <label className="block text-slate-200 mb-1 font-medium">Business / Entity Name</label>
+                    <label className="block text-slate-200 mb-1 font-medium">Full Name / Contact Person</label>
+                    <div className="flex items-center gap-2 bg-[#3a4f5c] border border-white/20 rounded-xl px-3 py-2.5">
+                      <User className="w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Alex Rivera"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="bg-transparent text-white w-full focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-200 mb-1 font-medium">
+                      {selectedPlan.id === 'freelancer' ? 'Studio / Freelance Brand Name' : 'Company / Entity Name'}
+                    </label>
                     <div className="flex items-center gap-2 bg-[#3a4f5c] border border-white/20 rounded-xl px-3 py-2.5">
                       <Building2 className="w-4 h-4 text-slate-400" />
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Easy Mondays Apparel"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder={selectedPlan.id === 'freelancer' ? 'e.g. Rivera Creative Studio' : 'e.g. Easy Mondays Apparel'}
+                        value={companyOrStudio}
+                        onChange={(e) => setCompanyOrStudio(e.target.value)}
+                        className="bg-transparent text-white w-full focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-200 mb-1 font-medium">
+                      {selectedPlan.id === 'freelancer' ? 'Primary Skill / Trade Offer' : 'Primary Business Category'}
+                    </label>
+                    <div className="flex items-center gap-2 bg-[#3a4f5c] border border-white/20 rounded-xl px-3 py-2.5">
+                      <Briefcase className="w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        placeholder={selectedPlan.id === 'freelancer' ? 'e.g. 4K Video Editing / Fullstack Dev' : 'e.g. Apparel Surplus / Office Space'}
+                        value={skillOrCategory}
+                        onChange={(e) => setSkillOrCategory(e.target.value)}
                         className="bg-transparent text-white w-full focus:outline-none"
                       />
                     </div>
@@ -307,21 +337,6 @@ export default function PricingPage() {
                       />
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-slate-200 mb-1 font-medium">Password</label>
-                    <div className="flex items-center gap-2 bg-[#3a4f5c] border border-white/20 rounded-xl px-3 py-2.5">
-                      <Lock className="w-4 h-4 text-slate-400" />
-                      <input
-                        type="password"
-                        required
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="bg-transparent text-white w-full focus:outline-none"
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 <Button
@@ -337,15 +352,15 @@ export default function PricingPage() {
             {regStep === 2 && (
               <form onSubmit={handleCompleteRegister} className="space-y-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono text-amber-300 uppercase font-bold">STEP 2 OF 2 • ACTIVATION</span>
-                  <h3 className="text-xl font-extrabold text-white">Select Billing Option</h3>
-                  <p className="text-xs text-slate-300">Confirm payment method for {selectedPlan.name}.</p>
+                  <span className="text-[10px] font-mono text-amber-300 uppercase font-bold">STEP 2 OF 2 • ANNUAL ACTIVATION</span>
+                  <h3 className="text-xl font-extrabold text-white">Confirm Plan Activation</h3>
+                  <p className="text-xs text-slate-300">Set up settlement for {selectedPlan.name}.</p>
                 </div>
 
-                {selectedPlan.monthlyPrice === 0 ? (
+                {selectedPlan.annualPrice === 0 ? (
                   <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-400/30 text-xs text-emerald-200 space-y-1">
-                    <p className="font-bold">✓ Free Tier Selected</p>
-                    <p className="text-[11px] opacity-80">No credit card or cash required. Instant trade feed access.</p>
+                    <p className="font-bold">✓ Free Freelancer Plan Selected</p>
+                    <p className="text-[11px] opacity-80">Instant access to post skill hours and initiate direct 2-way swaps.</p>
                   </div>
                 ) : (
                   <div className="space-y-2 text-xs">
@@ -355,7 +370,7 @@ export default function PricingPage() {
                     >
                       <div className="flex items-center gap-2.5">
                         <CreditCard className="w-4 h-4 text-amber-400" />
-                        <span>Corporate Card (${billingCycle === 'annual' ? selectedPlan.annualPrice : selectedPlan.monthlyPrice}/mo)</span>
+                        <span>Corporate Card (${selectedPlan.annualPrice}/yr)</span>
                       </div>
                       <input type="radio" checked={paymentOption === 'card'} readOnly className="accent-amber-400" />
                     </div>
@@ -366,7 +381,7 @@ export default function PricingPage() {
                     >
                       <div className="flex items-center gap-2.5">
                         <Wallet className="w-4 h-4 text-amber-400" />
-                        <span>Solana USDC Keypair</span>
+                        <span>Solana Devnet Wallet USDC</span>
                       </div>
                       <input type="radio" checked={paymentOption === 'crypto'} readOnly className="accent-amber-400" />
                     </div>
@@ -386,7 +401,7 @@ export default function PricingPage() {
                     disabled={isSubmitting}
                     className="flex-1 bg-white hover:bg-slate-100 text-[#334652] font-extrabold text-xs py-3 rounded-full shadow-md cursor-pointer flex items-center justify-center gap-2"
                   >
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Complete Registration & Activate</span>}
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Activate Annual Membership</span>}
                   </Button>
                 </div>
               </form>
@@ -399,9 +414,9 @@ export default function PricingPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-xl font-black text-white">{selectedPlan.name} Plan Active!</h3>
+                  <h3 className="text-xl font-black text-white">{selectedPlan.name} Activated!</h3>
                   <p className="text-xs text-slate-300">
-                    Welcome <strong className="text-white">{companyName}</strong>. Your reciprocal trading permissions are officially enabled.
+                    Welcome <strong className="text-white">{fullName}</strong> ({companyOrStudio}). Your trade account is officially live.
                   </p>
                 </div>
 
@@ -422,7 +437,7 @@ export default function PricingPage() {
 
       {/* FOOTER */}
       <footer className="border-t border-white/10 bg-[#24333b] py-6 px-6 text-xs text-slate-300 flex items-center justify-between">
-        <div><strong>TradeIt B2B Network</strong> • Zero-Cash Reciprocal Exchange</div>
+        <div><strong>TradeIt B2B Network</strong> • Annual Reciprocal Memberships</div>
         <Link href="/" className="hover:text-white">Back to Dashboard</Link>
       </footer>
 
