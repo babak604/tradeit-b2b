@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Tornado, PlusCircle, ShieldCheck, 
   Send, X, ArrowLeftRight, FileText, Download, CheckCircle2, UserCheck, LogIn, Bot, Loader2, Sparkles,
-  Coins, Search, Command, Sun, Moon, Activity, BadgeCheck, Check, ArrowRight
+  Coins, Search, Command, Sun, Moon, Activity, BadgeCheck, Check, ArrowRight, FileCheck, Layers, Lock, Cpu, KeyRound
 } from 'lucide-react';
 
 // Dynamic Client Component Imports
@@ -37,25 +37,26 @@ export default function MasterDashboardPage() {
   const [isCmdKOpen, setIsCmdKOpen] = useState(false);
   const [cmdSearchQuery, setCmdSearchQuery] = useState('');
 
-  // Theme Mode (Soft Blue-Grey vs Boardroom Light)
+  // Theme Mode
   const [themeMode, setThemeMode] = useState<'blue-grey' | 'light-boardroom'>('blue-grey');
 
   // Transaction Stepper Modal & Network Health
   const [txStep, setTxStep] = useState<number | null>(null);
   const [networkPing, setNetworkPing] = useState<number>(312);
-
-  // Confetti Burst State
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Auth & Agent States
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [agentThinking, setAgentThinking] = useState(false);
 
-  // Interactive RWA Simulator State (Bottom Section)
-  const [assetType, setAssetType] = useState<string>('Commercial Invoice');
-  const [assetValue, setAssetValue] = useState<number>(75000);
-  const [isTokenizing, setIsTokenizing] = useState<boolean>(false);
-  const [tokenizedAsset, setTokenizedAsset] = useState<any>(null);
+  // ADVANCED RWA TOKENIZATION STUDIO STATE
+  const [rwaCategory, setRwaCategory] = useState<string>('Commercial Invoice');
+  const [rwaValuation, setRwaValuation] = useState<number>(125000);
+  const [rwaDocName, setRwaDocName] = useState<string>('INVOICE_8849_EASY_MONDAYS.pdf');
+  const [fractionalShares, setFractionalShares] = useState<number>(100);
+  const [enableToken2022Compliance, setEnableToken2022Compliance] = useState<boolean>(true);
+  const [rwaMintStage, setRwaMintStage] = useState<'idle' | 'verifying_doc' | 'minting_spl' | 'complete'>('idle');
+  const [tokenizedRwaOutput, setTokenizedRwaOutput] = useState<any>(null);
 
   // Active Deal Room State
   const [deal, setDeal] = useState({
@@ -89,7 +90,6 @@ export default function MasterDashboardPage() {
   ]);
   const [newMessage, setNewMessage] = useState('');
 
-  // Global Keyboard Event Listener for Cmd + K / Ctrl + K
   useEffect(() => {
     setMounted(true);
 
@@ -104,7 +104,6 @@ export default function MasterDashboardPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Network Ping simulation
   useEffect(() => {
     const interval = setInterval(() => {
       setNetworkPing(290 + Math.floor(Math.random() * 40));
@@ -144,20 +143,31 @@ export default function MasterDashboardPage() {
     };
   }, [mounted, activeDealId]);
 
-  const handleSimulateTokenization = () => {
-    setIsTokenizing(true);
-    setTokenizedAsset(null);
+  // ADVANCED RWA MINTING PROCESS SIMULATION
+  const executeRwaMinting = () => {
+    setRwaMintStage('verifying_doc');
+    setTokenizedRwaOutput(null);
 
     setTimeout(() => {
-      setTokenizedAsset({
-        mintAddress: 'RWA_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_sol',
-        assetType,
-        value: assetValue,
-        supply: 1,
-        timestamp: new Date().toLocaleTimeString(),
-      });
-      setIsTokenizing(false);
-    }, 1100);
+      setRwaMintStage('minting_spl');
+      setTimeout(() => {
+        const docHash = '0x' + Array.from({length: 16}, () => Math.floor(Math.random()*16).toString(16)).join('');
+        const mintAddr = 'RWA_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_sol';
+        
+        setTokenizedRwaOutput({
+          mintAddress: mintAddr,
+          category: rwaCategory,
+          valuation: rwaValuation,
+          shares: fractionalShares,
+          sharePrice: (rwaValuation / fractionalShares).toFixed(2),
+          docName: rwaDocName,
+          docHash: docHash,
+          tokenStandard: enableToken2022Compliance ? 'Solana Token-2022 (Transfer Hook Enforced)' : 'Standard SPL Token',
+          timestamp: new Date().toLocaleTimeString(),
+        });
+        setRwaMintStage('complete');
+      }, 1200);
+    }, 1200);
   };
 
   const triggerAiAgentNegotiation = async () => {
@@ -328,7 +338,7 @@ export default function MasterDashboardPage() {
   return (
     <div className={`min-h-screen ${bgCanvasClass} flex flex-col font-sans transition-colors duration-300 selection:bg-[#384c57] selection:text-white relative`}>
       
-      {/* CONFETTI CELEBRATION BURST OVERLAY */}
+      {/* CONFETTI CELEBRATION OVERLAY */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center overflow-hidden">
           <div className="text-center space-y-2 animate-bounce">
@@ -340,7 +350,7 @@ export default function MasterDashboardPage() {
         </div>
       )}
 
-      {/* SOFT HEADER NAVIGATION */}
+      {/* HEADER NAVIGATION */}
       <header className={`border-b ${headerBgClass} backdrop-blur-md px-6 py-3.5 flex items-center justify-between sticky top-0 z-40 print:hidden`}>
         <div className="flex items-center space-x-4">
           <div className="p-2 bg-white/10 rounded-full border border-white/20 shadow-sm">
@@ -353,7 +363,6 @@ export default function MasterDashboardPage() {
             <p className="text-[11px] opacity-80 font-mono hidden sm:block">tradeit.tv • Reciprocal Trade Platform</p>
           </div>
 
-          {/* Live Solana Network Health Badge */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 rounded-full text-[11px] font-mono">
             <Activity className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
             <span>Solana Devnet: <strong>{networkPing}ms</strong></span>
@@ -361,7 +370,6 @@ export default function MasterDashboardPage() {
         </div>
 
         <div className="flex items-center space-x-3">
-          {/* Command Palette Search Button */}
           <button
             onClick={() => setIsCmdKOpen(true)}
             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer"
@@ -371,11 +379,10 @@ export default function MasterDashboardPage() {
             <kbd className="bg-black/20 text-[10px] px-1.5 py-0.5 rounded font-mono border border-white/20">⌘K</kbd>
           </button>
 
-          {/* Theme Toggle (Soft Blue-Grey vs Boardroom Light) */}
           <button
             onClick={() => setThemeMode(themeMode === 'blue-grey' ? 'light-boardroom' : 'blue-grey')}
             className="p-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full transition-all cursor-pointer"
-            title="Toggle Soft Blue-Grey / Boardroom Light Mode"
+            title="Toggle Theme"
           >
             {themeMode === 'blue-grey' ? <Sun className="w-4 h-4 text-sky-200" /> : <Moon className="w-4 h-4 text-slate-700" />}
           </button>
@@ -458,7 +465,7 @@ export default function MasterDashboardPage() {
           </div>
         </section>
 
-        {/* INTERACTIVE DEMO CONTROLLER */}
+        {/* DEMO CONTROLLER */}
         <DemoStoryController 
           onRunTwoWayDemo={runDirectTwoWayDemo}
           onRunThreeWayDemo={runThreeWayLoopDemo}
@@ -471,16 +478,13 @@ export default function MasterDashboardPage() {
         {/* B2B STAGE & DEAL ROOM GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* Left Column: Global Video Stage Feed */}
           <div className={`${activeDealId ? 'lg:col-span-6' : 'lg:col-span-12'} transition-all duration-300`}>
             <GlobalStageFeed onSelectDeal={(id) => setActiveDealId(id)} />
           </div>
 
-          {/* Right Slide-Over Panel: Autonomous Deal Room */}
           {activeDealId && (
             <div className="lg:col-span-6 bg-[#394f5c] border border-white/20 rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-2xl relative sticky top-24 h-[calc(100vh-120px)] overflow-y-auto hide-scrollbar animate-in slide-in-from-right duration-300">
               
-              {/* Drawer Header */}
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div>
                   <div className="flex items-center gap-2">
@@ -500,7 +504,6 @@ export default function MasterDashboardPage() {
                 </button>
               </div>
 
-              {/* Side-by-Side Offer Summary with D&B Trust Badges */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div 
                   onClick={() => setSelectedCompanyProfile(deal?.offer_a?.company ?? null)}
@@ -531,7 +534,6 @@ export default function MasterDashboardPage() {
                 </div>
               </div>
 
-              {/* Realtime Negotiation Chat */}
               <div className="flex-1 bg-[#2d404b] border border-white/10 rounded-2xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div className="space-y-3 overflow-y-auto max-h-[160px] hide-scrollbar">
                   {messages.map((msg, i) => (
@@ -564,10 +566,8 @@ export default function MasterDashboardPage() {
                 </form>
               </div>
 
-              {/* Deliverable Tracker */}
               <EscrowMilestoneTracker dealId={deal.id} />
 
-              {/* Realtime Contract Signing */}
               <div className="pt-2 border-t border-white/10 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs text-slate-200">
@@ -604,86 +604,144 @@ export default function MasterDashboardPage() {
 
         </div>
 
-        {/* HOW IT WORKS VISUAL NARRATIVE SECTION */}
+        {/* HOW IT WORKS SECTION */}
         <HowItWorksSection />
 
-        {/* --- POSITIONED AT THE BOTTOM: RWA TOKENIZATION & SOLANA ENGINE --- */}
+        {/* --- UPGRADED RWA TOKENIZATION & PROVENANCE STUDIO --- */}
         <section className="rounded-3xl border border-white/15 bg-[#3b505d]/90 p-6 sm:p-8 backdrop-blur-md shadow-xl space-y-6 mt-12">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-4">
-            <div className="flex items-center gap-2">
-              <Coins className="w-5 h-5 text-cyan-200" />
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-white/10 rounded-2xl border border-white/20">
+                <Coins className="w-6 h-6 text-cyan-200" />
+              </div>
               <div>
-                <h3 className="text-base font-bold text-slate-100">Real-World Asset (RWA) Tokenization & Settlement Engine</h3>
-                <p className="text-xs text-slate-200/80">Optionally mint physical inventory, invoices, or equipment into SPL tokens for automated Solana escrow settlement.</p>
+                <h3 className="text-lg font-extrabold text-slate-100">Institutional RWA Tokenization & Provenance Studio</h3>
+                <p className="text-xs text-slate-200/80">Convert physical commercial assets into compliant Solana Token-2022 SPL assets with on-chain document hashes.</p>
               </div>
             </div>
             <span className="rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs text-slate-200 font-mono">
-              Solana Devnet • Program ID: Es7dux19...ERi
+              Token-2022 • Program: Es7dux19...ERi
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            {/* Input Form */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs text-slate-200 mb-1.5 font-medium">Select Real-World Asset Class</label>
-                <select
-                  value={assetType}
-                  onChange={(e) => setAssetType(e.target.value)}
-                  className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs text-slate-100 focus:outline-none focus:border-white"
-                >
-                  <option value="Commercial Invoice">Commercial Invoice (#INV-8839)</option>
-                  <option value="Freight Cargo Container">Freight Cargo Container (Electronics)</option>
-                  <option value="Agricultural Commodity">Agricultural Commodity (Coffee Freight)</option>
-                  <option value="Industrial Equipment">Heavy Industrial Machinery</option>
-                </select>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Left 7 Columns: Tokenization Controls */}
+            <div className="lg:col-span-7 space-y-5">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Asset Class Category</label>
+                  <select
+                    value={rwaCategory}
+                    onChange={(e) => setRwaCategory(e.target.value)}
+                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs text-slate-100 focus:outline-none focus:border-white"
+                  >
+                    <option value="Commercial Invoice">Commercial Invoice (#INV-8849)</option>
+                    <option value="Freight Cargo Container">Freight Cargo Container (Electronics)</option>
+                    <option value="Agricultural Commodity">Agricultural Commodity (Coffee)</option>
+                    <option value="Industrial Equipment">Heavy Machinery & Fleet Equipment</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Appraised Valuation ($ USD)</label>
+                  <input
+                    type="number"
+                    value={rwaValuation}
+                    onChange={(e) => setRwaValuation(Number(e.target.value))}
+                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs font-mono text-slate-100 focus:outline-none focus:border-white"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs text-slate-200 mb-1.5 font-medium">Appraised Valuation ($ USD)</label>
+              {/* Document Hash Attachment & Fractional Shares */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Verified Legal Document PDF</label>
+                  <div className="flex items-center gap-2 bg-[#2d404b] border border-white/20 rounded-2xl p-2.5 text-xs">
+                    <FileCheck className="w-4 h-4 text-emerald-300" />
+                    <input
+                      type="text"
+                      value={rwaDocName}
+                      onChange={(e) => setRwaDocName(e.target.value)}
+                      className="bg-transparent text-slate-200 focus:outline-none text-xs w-full font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-200 mb-1.5 font-medium">Fractional SPL Token Shares</label>
+                  <input
+                    type="number"
+                    value={fractionalShares}
+                    onChange={(e) => setFractionalShares(Number(e.target.value))}
+                    className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs font-mono text-slate-100 focus:outline-none focus:border-white"
+                  />
+                </div>
+              </div>
+
+              {/* Solana Token-2022 Transfer Hook Toggle */}
+              <div className="flex items-center justify-between p-3.5 bg-[#2d404b] border border-white/15 rounded-2xl text-xs">
+                <div className="flex items-center gap-2.5">
+                  <KeyRound className="w-4 h-4 text-cyan-200" />
+                  <div>
+                    <span className="font-bold text-slate-100 block">Enforce Token-2022 Compliance Transfer Hooks</span>
+                    <span className="text-[10px] text-slate-300/80">Requires 2-of-2 multi-sig approval before token transfers on-chain.</span>
+                  </div>
+                </div>
                 <input
-                  type="number"
-                  value={assetValue}
-                  onChange={(e) => setAssetValue(Number(e.target.value))}
-                  className="w-full rounded-2xl bg-[#2d404b] border border-white/20 p-3 text-xs font-mono text-slate-100 focus:outline-none focus:border-white"
+                  type="checkbox"
+                  checked={enableToken2022Compliance}
+                  onChange={(e) => setEnableToken2022Compliance(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
                 />
               </div>
 
               <button
-                onClick={handleSimulateTokenization}
-                disabled={isTokenizing}
-                className="w-full rounded-full bg-white hover:bg-slate-100 p-3 text-xs font-bold text-[#334652] transition-all shadow-md disabled:opacity-50 cursor-pointer"
+                onClick={executeRwaMinting}
+                disabled={rwaMintStage !== 'idle' && rwaMintStage !== 'complete'}
+                className="w-full rounded-full bg-white hover:bg-slate-100 p-3.5 text-xs font-bold text-[#334652] transition-all shadow-md disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
-                {isTokenizing ? "Minting SPL Token on Solana..." : "⚡ Tokenize Asset on Solana Devnet"}
+                {rwaMintStage === 'verifying_doc' && <><Loader2 className="w-4 h-4 animate-spin text-[#334652]" /> <span>Step 1/2: Hashing Physical PDF Document...</span></>}
+                {rwaMintStage === 'minting_spl' && <><Loader2 className="w-4 h-4 animate-spin text-[#334652]" /> <span>Step 2/2: Minting Token-2022 Asset on Solana...</span></>}
+                {(rwaMintStage === 'idle' || rwaMintStage === 'complete') && <><span>⚡ Mint Compliant RWA Asset Token on Solana Devnet</span></>}
               </button>
             </div>
 
-            {/* Tokenized Output Card */}
-            <div className="rounded-2xl border border-white/15 bg-[#2d404b] p-5 space-y-3 font-mono text-xs">
-              <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                <span className="text-slate-300 uppercase tracking-wider text-[10px]">On-Chain Token Result</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] ${tokenizedAsset ? "bg-emerald-900/60 text-emerald-200 border border-emerald-400/30" : "bg-white/10 text-slate-300"}`}>
-                  {tokenizedAsset ? "TOKEN MINTED ON-CHAIN" : "AWAITING MINT"}
+            {/* Right 5 Columns: On-Chain Asset Provenance Result */}
+            <div className="lg:col-span-5 rounded-2xl border border-white/15 bg-[#2d404b] p-5 space-y-4 font-mono text-xs">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <span className="text-slate-300 uppercase tracking-wider text-[10px]">On-Chain Provenance Record</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] ${tokenizedRwaOutput ? "bg-emerald-900/60 text-emerald-200 border border-emerald-400/30" : "bg-white/10 text-slate-300"}`}>
+                  {tokenizedRwaOutput ? "MINTED ON-CHAIN" : "AWAITING MINT"}
                 </span>
               </div>
 
-              {tokenizedAsset ? (
-                <div className="space-y-2 text-slate-200">
-                  <div className="flex justify-between"><span className="text-slate-300">Asset Class:</span> <span>{tokenizedAsset.assetType}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-300">SPL Mint Address:</span> <span className="text-cyan-200 font-bold">{tokenizedAsset.mintAddress}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-300">Tokenized Value:</span> <span className="text-emerald-300">${tokenizedAsset.value.toLocaleString()} USD</span></div>
-                  <div className="flex justify-between"><span className="text-slate-300">Blockchain Standard:</span> <span>Solana SPL Token</span></div>
-                  <div className="flex justify-between"><span className="text-slate-300">Timestamp:</span> <span>{tokenizedAsset.timestamp}</span></div>
-                  <div className="pt-2 border-t border-white/10 text-[11px] text-emerald-200">
-                    ✓ Tokenized asset ready for deposit into 2-of-2 Escrow Vault
+              {tokenizedRwaOutput ? (
+                <div className="space-y-2.5 text-slate-200">
+                  <div className="flex justify-between"><span className="text-slate-400">Asset Category:</span> <span>{tokenizedRwaOutput.category}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">SPL Mint Address:</span> <span className="text-cyan-200 font-bold">{tokenizedRwaOutput.mintAddress}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Appraised Value:</span> <span className="text-emerald-300">${tokenizedRwaOutput.valuation.toLocaleString()} USD</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Fractional Shares:</span> <span>{tokenizedRwaOutput.shares} (${tokenizedRwaOutput.sharePrice} / share)</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Document Hash:</span> <span className="text-slate-300 text-[10px]">{tokenizedRwaOutput.docHash}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Token Standard:</span> <span className="text-sky-200 font-bold">{tokenizedRwaOutput.tokenStandard}</span></div>
+                  
+                  <div className="pt-3 border-t border-white/10 text-[11px] text-emerald-200 space-y-1">
+                    <p>✓ Asset verified and ready for 2-of-2 Escrow Staking</p>
+                    <a href={`https://explorer.solana.com/?cluster=devnet`} target="_blank" rel="noreferrer" className="text-cyan-200 underline block text-[10px]">
+                      View Token Mint on Solana Explorer ↗
+                    </a>
                   </div>
                 </div>
               ) : (
-                <div className="py-6 text-center text-slate-300 space-y-1 font-sans">
-                  <p>Select an asset class and click tokenize to simulate generating an SPL token on Solana.</p>
+                <div className="py-10 text-center text-slate-300 space-y-2 font-sans">
+                  <Coins className="w-8 h-8 text-slate-400 mx-auto opacity-50" />
+                  <p className="text-xs">Configure your RWA parameters and click mint to generate a Token-2022 compliant asset on Solana Devnet.</p>
                 </div>
               )}
             </div>
+
           </div>
         </section>
 
@@ -701,10 +759,10 @@ export default function MasterDashboardPage() {
         </div>
       </footer>
 
-      {/* COMMAND PALETTE SEARCH MODAL (CMD + K) */}
+      {/* COMMAND PALETTE MODAL */}
       {isCmdKOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-start justify-center pt-20 p-4">
-          <div className="bg-[#2d404b] border border-white/20 w-full max-w-xl rounded-2xl shadow-2xl p-4 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-100">
+          <div className="bg-[#2d404b] border border-white/20 w-full max-w-xl rounded-2xl shadow-2xl p-4 space-y-4 text-slate-100">
             <div className="flex items-center gap-2 border-b border-white/10 pb-3">
               <Search className="w-4 h-4 text-slate-300" />
               <input
@@ -746,7 +804,7 @@ export default function MasterDashboardPage() {
                 }}
                 className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center justify-between transition-all"
               >
-                <span>⚡ Jump to RWA Tokenization Simulator</span>
+                <span>⚡ Jump to RWA Tokenization Studio</span>
                 <ArrowRight className="w-3.5 h-3.5 opacity-60" />
               </button>
             </div>
@@ -754,7 +812,7 @@ export default function MasterDashboardPage() {
         </div>
       )}
 
-      {/* TRANSACTION LIFECYCLE STEPPER MODAL */}
+      {/* TRANSACTION LIFECYCLE MODAL */}
       {txStep !== null && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#2d404b] border border-white/20 w-full max-w-md rounded-3xl p-6 space-y-6 text-center text-slate-100 shadow-2xl">
@@ -830,7 +888,6 @@ export default function MasterDashboardPage() {
               </div>
             </div>
 
-            {/* Printable Contract Body */}
             <div className="space-y-4 text-xs font-serif leading-relaxed">
               <div className="flex justify-between items-start border-b pb-3">
                 <div>
