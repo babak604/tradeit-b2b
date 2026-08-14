@@ -1,41 +1,20 @@
-import { createClient } from '@/lib/supabase/server';
-import { ToastProvider } from '@/components/providers/ToastProvider';
-import { RealtimeDealListener } from '@/components/providers/RealtimeDealListener';
-import { WalletContextProvider } from '@/components/solana/WalletContextProvider';
-// @ts-expect-error Next.js handles this CSS side-effect import at build time.
+import type { Metadata } from 'next';
 import './globals.css';
 
-export default async function RootLayout({
+export const metadata: Metadata = {
+  title: 'TradeIt B2B Network | Reciprocal Barter & Tokenization Platform',
+  description: 'Enterprise reciprocal trading, circular loop matching, and RWA tokenization engine on Solana.',
+};
+
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-
-  // Fetch company ID server-side to initialize listener cleanly
-  const { data: { user } } = await supabase.auth.getUser();
-  let companyId = '';
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    // Fallback: If no company_id in profiles, use user.id directly
-    companyId = profile?.company_id || user.id;
-  }
-
   return (
-    <html lang="en" className="dark">
-      <body className="bg-slate-950 text-slate-100 antialiased selection:bg-sky-500 selection:text-white hide-scrollbar">
-        <WalletContextProvider>
-          <ToastProvider>
-            {companyId && <RealtimeDealListener companyId={companyId} />}
-            {children}
-          </ToastProvider>
-        </WalletContextProvider>
+    <html lang="en" className="bg-[#4a6370]">
+      <body className="bg-[#4a6370] text-slate-100 min-h-screen antialiased selection:bg-[#384c57] selection:text-white">
+        {children}
       </body>
     </html>
   );

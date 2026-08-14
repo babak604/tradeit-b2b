@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { 
-  Coins, FileCheck, KeyRound, Loader2, ArrowLeft, ShieldCheck, 
+  Coins, FileCheck, KeyRound, Loader2, ArrowLeft, 
   Layers, Building2, Truck, Package, Wheat, FileText
 } from 'lucide-react';
 
@@ -57,12 +56,12 @@ export default function RwaStudioPage() {
         <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center gap-2 text-xs text-slate-200 hover:text-white font-bold">
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to B2B Trading</span>
+            <span>Back to Dashboard</span>
           </Link>
         </div>
 
         <div className="font-extrabold text-sm tracking-wide text-white flex items-center gap-2">
-          <Coins className="w-4 h-4 text-yellow-200" />
+          <Coins className="w-4 h-4 text-amber-400" />
           <span>RWA TOKENIZATION & PROVENANCE STUDIO</span>
         </div>
       </header>
@@ -89,11 +88,11 @@ export default function RwaStudioPage() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`p-4 rounded-2xl border cursor-pointer transition-all space-y-2 ${
                   isSelected 
-                    ? 'bg-[#3b505d] border-yellow-200 text-white shadow-xl' 
+                    ? 'bg-[#3b505d] border-amber-400 text-white shadow-xl' 
                     : 'bg-[#2d404b] border-white/10 text-slate-300 hover:border-white/30'
                 }`}
               >
-                <Icon className={`w-6 h-6 ${isSelected ? 'text-yellow-200' : 'text-slate-400'}`} />
+                <Icon className={`w-6 h-6 ${isSelected ? 'text-amber-400' : 'text-slate-400'}`} />
                 <h3 className="font-bold text-xs">{cat.name}</h3>
                 <p className="text-[10px] text-slate-300 leading-tight">{cat.desc}</p>
               </div>
@@ -107,7 +106,7 @@ export default function RwaStudioPage() {
           {/* LEFT 7 COLS: PARAMETERS */}
           <div className="lg:col-span-7 bg-[#3b505d] border border-white/15 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
             <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-              <Layers className="w-5 h-5 text-yellow-200" />
+              <Layers className="w-5 h-5 text-amber-400" />
               <span>Configure Asset Parameters</span>
             </h3>
 
@@ -136,7 +135,7 @@ export default function RwaStudioPage() {
             <div className="text-xs space-y-1">
               <label className="block text-slate-200 font-medium">Verified Legal PDF Attachment</label>
               <div className="flex items-center gap-2 bg-[#2d404b] border border-white/20 rounded-xl p-3">
-                <FileCheck className="w-4 h-4 text-yellow-200" />
+                <FileCheck className="w-4 h-4 text-amber-400" />
                 <input
                   type="text"
                   value={docName}
@@ -148,7 +147,7 @@ export default function RwaStudioPage() {
 
             <div className="flex items-center justify-between p-4 bg-[#2d404b] border border-white/15 rounded-2xl text-xs">
               <div className="flex items-center gap-2.5">
-                <KeyRound className="w-4 h-4 text-yellow-200" />
+                <KeyRound className="w-4 h-4 text-amber-400" />
                 <div>
                   <span className="font-bold text-white block">Token-2022 Transfer Hook Enforcement</span>
                   <span className="text-[10px] text-slate-300">Requires multi-sig escrow verification prior to on-chain transfer.</span>
@@ -158,7 +157,7 @@ export default function RwaStudioPage() {
                 type="checkbox"
                 checked={enforceToken2022}
                 onChange={(e) => setEnforceToken2022(e.target.checked)}
-                className="w-4 h-4 accent-yellow-200 rounded cursor-pointer"
+                className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
               />
             </div>
 
@@ -184,7 +183,7 @@ export default function RwaStudioPage() {
 
             {mintResult ? (
               <div className="space-y-3 text-slate-200">
-                <div className="flex justify-between"><span className="text-slate-400">Mint Address:</span> <span className="text-yellow-200 font-bold">{mintResult.mintAddress}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Mint Address:</span> <span className="text-amber-300 font-bold">{mintResult.mintAddress}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Category:</span> <span>{mintResult.category}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Valuation:</span> <span className="text-emerald-300">${mintResult.valuation.toLocaleString()} USD</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Shares:</span> <span>{mintResult.shares} (${mintResult.sharePrice}/share)</span></div>
@@ -197,7 +196,7 @@ export default function RwaStudioPage() {
               </div>
             ) : (
               <div className="py-12 text-center text-slate-300 space-y-2 font-sans">
-                <Coins className="w-8 h-8 text-yellow-200 mx-auto opacity-60" />
+                <Coins className="w-8 h-8 text-amber-400 mx-auto opacity-60" />
                 <p className="text-xs">Configure your parameters on the left and click mint to simulate on-chain asset creation.</p>
               </div>
             )}

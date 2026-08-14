@@ -1,12 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Check, ArrowLeft, Sparkles, ShieldCheck, Zap, Building2, Coins } from 'lucide-react';
+import { Check, ArrowLeft, ShieldCheck, X, CheckCircle2 } from 'lucide-react';
 
 export default function PricingPage() {
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
   const plans = [
     {
+      id: 'starter',
       name: 'Starter Barter',
       price: '$0',
       period: 'Forever Free',
@@ -22,6 +26,7 @@ export default function PricingPage() {
       highlighted: false
     },
     {
+      id: 'growth',
       name: 'Growth B2B',
       price: '$149',
       period: 'per month',
@@ -38,6 +43,7 @@ export default function PricingPage() {
       highlighted: true
     },
     {
+      id: 'enterprise',
       name: 'Enterprise Network',
       price: '$499',
       period: 'per month',
@@ -66,11 +72,6 @@ export default function PricingPage() {
             <span>Back to Dashboard</span>
           </Link>
         </div>
-
-        <div className="font-extrabold text-sm tracking-wide text-white flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-yellow-200" />
-          <span>MEMBERSHIP PLANS & PRICING</span>
-        </div>
       </header>
 
       {/* MAIN CONTENT */}
@@ -86,17 +87,17 @@ export default function PricingPage() {
 
         {/* PRICING CARDS GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-          {plans.map((plan, i) => (
+          {plans.map((plan) => (
             <div
-              key={i}
+              key={plan.id}
               className={`rounded-3xl p-8 flex flex-col justify-between space-y-6 transition-all ${
                 plan.highlighted 
-                  ? 'bg-[#3b505d] border-2 border-yellow-200 shadow-2xl relative scale-105' 
+                  ? 'bg-[#3b505d] border-2 border-amber-400 shadow-2xl relative scale-105' 
                   : 'bg-[#2d404b] border border-white/15'
               }`}
             >
               {plan.highlighted && (
-                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-yellow-200 text-[#334652] font-black text-[10px] uppercase px-4 py-1 rounded-full shadow-md font-mono">
+                <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-[#334652] font-black text-[10px] uppercase px-4 py-1 rounded-full shadow-md font-mono">
                   MOST POPULAR FOR SMBS
                 </span>
               )}
@@ -115,7 +116,7 @@ export default function PricingPage() {
                 <div className="space-y-2.5 pt-4 border-t border-white/10 text-xs text-slate-200">
                   {plan.features.map((feat, idx) => (
                     <div key={idx} className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-yellow-200 shrink-0 mt-0.5" />
+                      <Check className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                       <span>{feat}</span>
                     </div>
                   ))}
@@ -123,6 +124,7 @@ export default function PricingPage() {
               </div>
 
               <Button
+                onClick={() => setSelectedPlan(plan.name)}
                 className={`w-full py-3.5 rounded-full font-extrabold text-xs cursor-pointer shadow-lg transition-all ${
                   plan.highlighted
                     ? 'bg-white text-[#334652] hover:bg-slate-100'
@@ -136,15 +138,44 @@ export default function PricingPage() {
         </div>
 
         {/* TAX & COMPLIANCE FOOTNOTE */}
-        <div className="p-6 rounded-3xl bg-[#2d404b] border border-white/15 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-slate-200">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="w-6 h-6 text-yellow-200 shrink-0" />
-            <span>Tax Compliant: Automatic non-cash barter ledger exports (CRA T2125 / IRS Schedule C).</span>
-          </div>
-          <Link href="/" className="text-yellow-200 underline">Return to Main Trading Stage ↗</Link>
+        <div className="p-6 rounded-3xl bg-[#2d404b] border border-white/15 flex items-center justify-start gap-3 text-xs font-mono text-slate-200">
+          <ShieldCheck className="w-6 h-6 text-amber-400 shrink-0" />
+          <span>Tax Compliant: Automatic non-cash barter ledger exports (CRA T2125 / IRS Schedule C).</span>
         </div>
 
       </main>
+
+      {/* MEMBERSHIP PLAN ACTION MODAL */}
+      {selectedPlan && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#2d404b] border border-white/20 w-full max-w-md rounded-3xl p-6 space-y-5 text-center text-slate-100 shadow-2xl relative">
+            <button 
+              onClick={() => setSelectedPlan(null)} 
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="p-3 bg-amber-400/10 rounded-full w-12 h-12 mx-auto flex items-center justify-center border border-amber-400/30">
+              <CheckCircle2 className="w-6 h-6 text-amber-400" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-white">Select {selectedPlan} Plan</h3>
+              <p className="text-xs text-slate-300">
+                Your account is being configured for the <strong className="text-amber-300">{selectedPlan}</strong> tier on Solana Devnet.
+              </p>
+            </div>
+
+            <Button
+              onClick={() => setSelectedPlan(null)}
+              className="w-full bg-white hover:bg-slate-100 text-[#334652] font-extrabold text-xs py-3 rounded-full shadow-md cursor-pointer"
+            >
+              Proceed to Dashboard
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
       <footer className="border-t border-white/10 bg-[#24333b] py-6 px-6 text-xs text-slate-300 flex items-center justify-between">
